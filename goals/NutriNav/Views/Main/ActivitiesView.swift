@@ -2,7 +2,7 @@
 //  ActivitiesView.swift
 //  NutriNav
 //
-//  Activity & Hobbies selection and tracking screen
+//  Activity & Hobbies screen - using DesignSystem
 //
 
 import SwiftUI
@@ -12,94 +12,50 @@ struct ActivitiesView: View {
     @State private var hobbies: [Hobby] = MockDataService.shared.getHobbies()
     @State private var showHealthKitPermission = false
     
+    var unlockedBadges: [HobbyBadge] {
+        hobbies.flatMap { $0.badges.filter { $0.isUnlocked } }
+    }
+    
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Your Activities")
-                            .font(.system(size: 32, weight: .bold))
+            ZStack {
+                Color.background.ignoresSafeArea() // Design System: background = #ffffff
+                
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Header
+                        headerSection
+                            .padding(.top, Spacing.xxl)
                         
-                        Text("Select your hobbies and sports to personalize your nutrition plan")
-                            .font(.system(size: 16))
-                            .foregroundColor(.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    
-                    // HealthKit Status
-                    if !appState.healthKitService.isAuthorized {
-                        HealthKitPermissionCard {
-                            showHealthKitPermission = true
+                        // HealthKit Status
+                        if !appState.healthKitService.isAuthorized {
+                            healthKitPermissionCard
+                                .padding(.horizontal, Spacing.md)
+                        } else {
+                            healthKitCard
+                                .padding(.horizontal, Spacing.md)
                         }
-                        .padding(.horizontal, 20)
-                    } else {
-                        ActivitySummaryCard(
-                            steps: appState.todaySteps,
-                            activeCalories: appState.todayActiveCalories,
-                            workouts: appState.todayWorkouts
-                        )
-                        .padding(.horizontal, 20)
-                    }
-                    
-                    // Selected Hobbies
-                    VStack(alignment: .leading, spacing: 15) {
-                        HStack {
-                            Text("Your Hobbies")
-                                .font(.system(size: 24, weight: .bold))
-                            
-                            Spacer()
-                            
-                            Text("\(hobbies.filter { $0.isSelected }.count) selected")
-                                .font(.system(size: 14))
-                                .foregroundColor(.textSecondary)
-                        }
-                        .padding(.horizontal, 20)
                         
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 15) {
-                            ForEach($hobbies) { $hobby in
-                                HobbyCard(hobby: $hobby)
-                            }
+                        // Hobbies Section
+                        hobbiesSection
+                            .padding(.horizontal, Spacing.md)
+                        
+                        // Badges Section
+                        if !unlockedBadges.isEmpty {
+                            badgesSection
+                                .padding(.horizontal, Spacing.md)
                         }
-                        .padding(.horizontal, 20)
-                    }
-                    .padding(.top, 10)
-                    
-                    // Badges Section
-                    if !unlockedBadges.isEmpty {
-                        VStack(alignment: .leading, spacing: 15) {
-                            HStack(spacing: 8) {
-                                Text("🏆")
-                                    .font(.system(size: 24))
-                                Text("Your Badges")
-                                    .font(.system(size: 24, weight: .bold))
-                            }
-                            .padding(.horizontal, 20)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 15) {
-                                    ForEach(unlockedBadges) { badge in
-                                        BadgeCard(badge: badge)
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                            }
+                        
+                        // Activity Impact
+                        if !appState.todayWorkouts.isEmpty {
+                            activityImpactCard
+                                .padding(.horizontal, Spacing.md)
                         }
-                        .padding(.top, 10)
-                    }
-                    
-                    // Activity Impact on Nutrition
-                    if !appState.todayWorkouts.isEmpty {
-                        ActivityNutritionImpactCard(workouts: appState.todayWorkouts)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 10)
+                        
+                        Spacer(minLength: Spacing.xl)
                     }
                 }
-                .padding(.bottom, 20)
             }
-            .navigationTitle("Activities")
             .sheet(isPresented: $showHealthKitPermission) {
                 HealthKitPermissionView()
                     .environmentObject(appState)
@@ -107,147 +63,222 @@ struct ActivitiesView: View {
         }
     }
     
-    private var unlockedBadges: [HobbyBadge] {
-        hobbies.flatMap { $0.badges.filter { $0.isUnlocked } }
+    // MARK: - Header (Design System: h1=24pt medium, input=16pt regular)
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Your Activities")
+                .font(.h1) // 24pt, medium
+                .foregroundColor(.textPrimary)
+            
+            Text("Select your hobbies and sports to personalize your nutrition plan")
+                .font(.input) // 16pt, regular
+                .foregroundColor(.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.md)
+        .padding(.bottom, Spacing.md)
     }
-}
-
-struct HobbyCard: View {
-    @Binding var hobby: Hobby
     
-    var body: some View {
-        Button(action: {
-            hobby.isSelected.toggle()
-        }) {
-            VStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(hobby.isSelected ? Color.appPurple.opacity(0.2) : Color.gray.opacity(0.1))
-                        .frame(width: 60, height: 60)
+    // MARK: - HealthKit
+    
+    private var healthKitPermissionCard: some View {
+        PrimaryCard {
+            HealthKitPermissionCard {
+                showHealthKitPermission = true
+            }
+        }
+    }
+    
+    private var healthKitCard: some View {
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SectionHeader(title: "Activity")
+                
+                HStack(spacing: Spacing.lg) {
+                    StatRing(
+                        value: appState.todaySteps,
+                        maxValue: 10000,
+                        color: .primaryAccent,
+                        size: 70
+                    )
                     
-                    Text(hobby.type.emoji)
-                        .font(.system(size: 32))
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text("\(Int(appState.todaySteps)) steps")
+                            .font(.body)
+                            .foregroundColor(.textPrimary)
+                        
+                        Text("\(Int(appState.todayActiveCalories)) cal burned")
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                    }
+                    
+                    Spacer()
                 }
+            }
+        }
+    }
+    
+    // MARK: - Hobbies
+    
+    private var hobbiesSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                SectionHeader(title: "Your Hobbies")
                 
-                Text(hobby.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.textPrimary)
+                Spacer()
                 
-                if hobby.isSelected {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.green)
-                        Text("Selected")
-                            .font(.system(size: 12))
-                            .foregroundColor(.green)
+                BadgeView(
+                    text: "\(hobbies.filter { $0.isSelected }.count) selected",
+                    color: .primaryAccent
+                )
+            }
+            
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Spacing.md) {
+                ForEach($hobbies) { $hobby in
+                    hobbyCard(hobby: $hobby)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Hobby Card (Design System: input=16pt regular, card padding=16, cornerRadius=lg=10)
+    private func hobbyCard(hobby: Binding<Hobby>) -> some View {
+        Button(action: {
+            HapticFeedback.selection()
+            hobby.wrappedValue.isSelected.toggle()
+        }) {
+            PrimaryCard { // Card.padding=16, Card.cornerRadius=lg=10
+                VStack(spacing: Spacing.md) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                hobby.wrappedValue.isSelected
+                                    ? Color.primaryAccent.opacity(0.2)
+                                    : Color.textTertiary.opacity(0.1)
+                            )
+                            .frame(width: 60, height: 60)
+                        
+                        Text(hobby.wrappedValue.type.emoji)
+                            .font(.system(size: 32))
+                    }
+                    
+                    Text(hobby.wrappedValue.name)
+                        .font(.input) // 16pt, regular
+                        .foregroundColor(.textPrimary)
+                    
+                    if hobby.wrappedValue.isSelected {
+                        BadgeView(
+                            text: "Selected",
+                            color: .success,
+                            size: .small
+                        )
                     }
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(20)
-            .background(hobby.isSelected ? Color.appPurple.opacity(0.1) : Color.cardBackground)
-            .cornerRadius(15)
             .overlay(
-                RoundedRectangle(cornerRadius: 15)
-                    .stroke(hobby.isSelected ? Color.appPurple : Color.clear, lineWidth: 2)
-            )
-        }
-    }
-}
-
-struct BadgeCard: View {
-    let badge: HobbyBadge
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.yellow, Color.appOrange],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                RoundedRectangle(cornerRadius: Radius.lg) // Card cornerRadius = 10
+                    .stroke(
+                        hobby.wrappedValue.isSelected ? Color.primaryAccent : Color.clear,
+                        lineWidth: 2
                     )
-                    .frame(width: 70, height: 70)
-                
-                Text(badge.icon)
-                    .font(.system(size: 35))
-            }
-            
-            Text(badge.name)
-                .font(.system(size: 14, weight: .semibold))
-                .multilineTextAlignment(.center)
-            
-            Text(badge.description)
-                .font(.system(size: 11))
-                .foregroundColor(.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(width: 120)
-        .padding(15)
-        .background(Color.cardBackground)
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-    }
-}
-
-struct ActivityNutritionImpactCard: View {
-    let workouts: [Activity]
-    
-    var totalCaloriesBurned: Double {
-        workouts.reduce(0) { $0 + $1.caloriesBurned }
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text("⚡")
-                    .font(.system(size: 24))
-                Text("Activity Impact")
-                    .font(.system(size: 20, weight: .bold))
-            }
-            
-            Text("You've burned \(Int(totalCaloriesBurned)) calories today! Your nutrition goals have been adjusted.")
-                .font(.system(size: 14))
-                .foregroundColor(.textSecondary)
-            
-            HStack(spacing: 20) {
-                StatItem(icon: "flame.fill", value: "\(Int(totalCaloriesBurned))", label: "Calories", color: .orange)
-                StatItem(icon: "figure.strengthtraining.traditional", value: "\(workouts.count)", label: "Workouts", color: .purple)
-            }
-        }
-        .padding(20)
-        .background(
-            LinearGradient(
-                colors: [Color.appPurple.opacity(0.1), Color.appPink.opacity(0.1)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
             )
-        )
-        .cornerRadius(15)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
-}
-
-struct StatItem: View {
-    let icon: String
-    let value: String
-    let label: String
-    let color: Color
     
-    var body: some View {
-        HStack(spacing: 8) {
+    // MARK: - Badges
+    
+    private var badgesSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            SectionHeader(title: "Your Badges")
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.md) {
+                    ForEach(unlockedBadges) { badge in
+                        badgeCard(badge: badge)
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Badge Card (Design System: input=16pt regular, card padding=16, cornerRadius=lg=10)
+    private func badgeCard(badge: HobbyBadge) -> some View {
+        PrimaryCard { // Card.padding=16, Card.cornerRadius=lg=10
+            VStack(spacing: Spacing.sm) {
+                ZStack {
+                    Circle()
+                        .fill(Color.primaryAccent.opacity(0.1))
+                        .frame(width: 70, height: 70)
+                    
+                    Text(badge.icon)
+                        .font(.system(size: 35))
+                }
+                
+                Text(badge.name)
+                    .font(.input) // 16pt, regular
+                    .foregroundColor(.textPrimary)
+                    .multilineTextAlignment(.center)
+                
+                Text(badge.description)
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(width: 120)
+        }
+    }
+    
+    // MARK: - Activity Impact
+    
+    private var activityImpactCard: some View {
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SectionHeader(title: "Activity Impact")
+                
+                Text("You've burned \(Int(totalCaloriesBurned)) calories today! Your nutrition goals have been adjusted.")
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
+                
+                HStack(spacing: Spacing.lg) {
+                    statItem(
+                        icon: "flame.fill",
+                        value: "\(Int(totalCaloriesBurned))",
+                        label: "Calories",
+                        color: .calorieColor
+                    )
+                    
+                    statItem(
+                        icon: "figure.strengthtraining.traditional",
+                        value: "\(appState.todayWorkouts.count)",
+                        label: "Workouts",
+                        color: .proteinColor
+                    )
+                }
+            }
+        }
+    }
+    
+    private var totalCaloriesBurned: Double {
+        appState.todayWorkouts.reduce(0) { $0 + $1.caloriesBurned }
+    }
+    
+    // MARK: - Stat Item (Design System: h3=18pt medium)
+    private func statItem(icon: String, value: String, label: String, color: Color) -> some View {
+        HStack(spacing: Spacing.xs) {
             Image(systemName: icon)
                 .foregroundColor(color)
+                .font(.system(size: 18))
+            
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.h3) // 18pt, medium
+                    .foregroundColor(.textPrimary)
+                
                 Text(label)
-                    .font(.system(size: 12))
+                    .font(.bodySmall)
                     .foregroundColor(.textSecondary)
             }
         }
     }
 }
-

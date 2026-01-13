@@ -2,7 +2,7 @@
 //  LoginView.swift
 //  NutriNav
 //
-//  Sign up / Login screen
+//  Sign up / Login screen - using DesignSystem
 //
 
 import SwiftUI
@@ -16,123 +16,119 @@ struct LoginView: View {
     
     var body: some View {
         ZStack {
-            // Gradient background
-            LinearGradient(
-                colors: [Color.appPurple, Color.appPink, Color.appOrange],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            Color.background.ignoresSafeArea() // Design System: background = #ffffff
             
-            VStack(spacing: 30) {
+            VStack(spacing: Spacing.xl) {
                 Spacer()
                 
                 // App Icon
                 ZStack {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.white)
+                    RoundedRectangle(cornerRadius: CornerRadius.button)
+                        .fill(Color.cardBackground)
                         .frame(width: 100, height: 100)
                     
                     Image(systemName: "leaf.fill")
                         .font(.system(size: 50))
-                        .foregroundColor(.green)
+                        .foregroundColor(.success)
                 }
                 .overlay(
                     Circle()
-                        .fill(Color.yellow)
+                        .fill(Color.warning)
                         .frame(width: 30, height: 30)
                         .overlay(
                             Image(systemName: "star.fill")
                                 .font(.system(size: 12))
-                                .foregroundColor(.white)
+                                .foregroundColor(.primaryBackground)
                         )
                         .offset(x: 35, y: -35)
                 )
                 
-                // Title
-                VStack(spacing: 8) {
+                // Title (Design System: h1=24pt medium, input=16pt regular)
+                VStack(spacing: Spacing.sm) {
                     Text("NutriNav")
-                        .font(.system(size: 42, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(.h1) // 24pt, medium
+                        .foregroundColor(.textPrimary)
                     
                     Text("Your glow-up starts here ✨")
-                        .font(.system(size: 18))
-                        .foregroundColor(.white.opacity(0.9))
+                        .font(.input) // 16pt, regular
+                        .foregroundColor(.textSecondary)
                 }
                 
                 Spacer()
                 
                 // Login/Sign Up Form
-                VStack(spacing: 20) {
-                    // Email
-                    VStack(alignment: .leading, spacing: 8) {
+                VStack(spacing: Spacing.lg) {
+                    // Email (Design System: label=16pt medium, input=16pt regular, inputBackground=#f3f3f5, cornerRadius=md=8)
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("Email")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
+                            .font(.label) // 16pt, medium
+                            .foregroundColor(.textPrimary)
                         
                         TextField("Enter your email", text: $email)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(12)
+                            .font(.input) // 16pt, regular
+                            .foregroundColor(.textPrimary)
+                            .padding(Spacing.md)
+                            .background(Color.inputBackground) // #f3f3f5
+                            .cornerRadius(Radius.md) // Button cornerRadius = 8
                     }
                     
-                    // Password
-                    VStack(alignment: .leading, spacing: 8) {
+                    // Password (Design System: label=16pt medium, input=16pt regular, inputBackground=#f3f3f5, cornerRadius=md=8)
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("Password")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
+                            .font(.label) // 16pt, medium
+                            .foregroundColor(.textPrimary)
                         
                         SecureField("Enter your password", text: $password)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(12)
+                            .font(.input) // 16pt, regular
+                            .foregroundColor(.textPrimary)
+                            .padding(Spacing.md)
+                            .background(Color.inputBackground) // #f3f3f5
+                            .cornerRadius(Radius.md) // Button cornerRadius = 8
                     }
                     
                     // Primary action button
-                    Button(action: {
-                        // TODO: Implement authentication
-                        // For MVP, just proceed to onboarding
-                        showOnboarding = true
-                        AnalyticsService.shared.trackOnboardingCompleted(age: 0, gender: "Unknown", goal: "Unknown")
-                    }) {
-                        Text(isLogin ? "Sign In" : "Sign Up")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.appPurple)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(15)
-                    }
+                    PrimaryButton(
+                        title: isLogin ? "Sign In" : "Sign Up",
+                        action: {
+                            HapticFeedback.impact()
+                            // TODO: Implement authentication
+                            // For MVP, just proceed to onboarding
+                            showOnboarding = true
+                            AnalyticsService.shared.trackOnboardingCompleted(age: 0, gender: "Unknown", goal: "Unknown")
+                        },
+                        icon: isLogin ? "person.fill" : "person.badge.plus"
+                    )
                     
                     // Toggle login/signup
-                    Button(action: {
-                        isLogin.toggle()
-                    }) {
-                        Text(isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.9))
-                    }
+                    TextButton(
+                        title: isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In",
+                        action: {
+                            HapticFeedback.selection()
+                            isLogin.toggle()
+                        }
+                    )
                     
                     // Skip for now
-                    Button(action: {
-                        showOnboarding = true
-                    }) {
-                        Text("Continue as Guest")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.7))
-                    }
+                    TextButton(
+                        title: "Continue as Guest",
+                        action: {
+                            HapticFeedback.selection()
+                            showOnboarding = true
+                        },
+                        color: .textSecondary
+                    )
                 }
-                .padding(.horizontal, 30)
+                .padding(.horizontal, Spacing.xl)
                 
                 Spacer()
                 
                 // Disclaimer
                 Text("Free to start • No credit card required")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.7))
-                    .padding(.bottom, 40)
+                    .font(.bodySmall)
+                    .foregroundColor(.textTertiary)
+                    .padding(.bottom, Spacing.xl)
             }
         }
         .navigationDestination(isPresented: $showOnboarding) {
@@ -140,4 +136,3 @@ struct LoginView: View {
         }
     }
 }
-

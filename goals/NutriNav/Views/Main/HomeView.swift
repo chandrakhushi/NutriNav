@@ -2,445 +2,316 @@
 //  HomeView.swift
 //  NutriNav
 //
-//  Main dashboard/home screen
+//  Main dashboard/home screen - using DesignSystem
 //
 
 import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
-    @State private var recipes = MockDataService.shared.getRecipes()
-    @State private var showHealthKitPermission = false
+    @State private var showNutritionDetails = false
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Header section with gradient
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Welcome back! 👋")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white.opacity(0.9))
-                                
-                                HStack(spacing: 8) {
-                                    Text("You're Crushing It!")
-                                        .font(.system(size: 28, weight: .bold))
-                                        .foregroundColor(.white)
-                                    
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.yellow)
-                                            .frame(width: 30, height: 30)
-                                        Image(systemName: "crown.fill")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(.appPurple)
-                                    }
-                                }
-                                
-                                Text("Thursday, January 9 • Keep up the momentum! 🔥")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.9))
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 60)
-                        .padding(.bottom, 20)
+            ZStack {
+                Color.background.ignoresSafeArea() // Design System: background = #ffffff
+                
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Header Section
+                        headerSection
+                            .padding(.top, Spacing.xxl)
+                        
+                        // Nutrition Section
+                        nutritionSection
+                            .padding(.horizontal, Spacing.md)
+                        
+                        // Quick Actions
+                        quickActionsSection
+                            .padding(.horizontal, Spacing.md)
+                        
+                        // Daily Tip
+                        dailyTipCard
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.bottom, Spacing.xl)
                     }
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.appPurple, Color.appPink],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    
-                    // Content section
-                    VStack(spacing: 20) {
-                        // Streak card
-                        StreakCard(streak: appState.currentStreak)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 20)
-                        
-                        // HealthKit Activity section
-                        if appState.healthKitService.isAuthorized {
-                            ActivitySummaryCard(
-                                steps: appState.todaySteps,
-                                activeCalories: appState.todayActiveCalories,
-                                workouts: appState.todayWorkouts
-                            )
-                            .padding(.horizontal, 20)
-                        } else {
-                            // HealthKit permission prompt
-                            HealthKitPermissionCard {
-                                showHealthKitPermission = true
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                        
-                        // Today's Fuel section
-                        VStack(alignment: .leading, spacing: 15) {
-                            HStack {
-                                HStack(spacing: 8) {
-                                    Text("Today's Fuel")
-                                        .font(.system(size: 24, weight: .bold))
-                                    Text("⚡")
-                                        .font(.system(size: 20))
-                                }
-                                
-                                Spacer()
-                                
-                                Button(action: {}) {
-                                    Text("\(Int(appState.dailyNutrition.totalCompletion))% Complete")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(Color.appPurple)
-                                        .cornerRadius(20)
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            
-                            // Nutrition cards
-                            NutritionCard(
-                                title: "Calories",
-                                icon: "flame.fill",
-                                current: appState.dailyNutrition.calories.current,
-                                target: appState.dailyNutrition.calories.target,
-                                color: .calorieColor
-                            )
-                            
-                            NutritionCard(
-                                title: "Protein",
-                                icon: "figure.strengthtraining.traditional",
-                                current: appState.dailyNutrition.protein.current,
-                                target: appState.dailyNutrition.protein.target,
-                                color: .proteinColor
-                            )
-                            
-                            // Carbs and Fats side by side
-                            HStack(spacing: 15) {
-                                SmallNutritionCard(
-                                    title: "Carbs",
-                                    icon: "apple.fill",
-                                    value: appState.dailyNutrition.carbs.current,
-                                    color: .carbColor
-                                )
-                                
-                                SmallNutritionCard(
-                                    title: "Fats",
-                                    icon: "leaf.fill",
-                                    value: appState.dailyNutrition.fats.current,
-                                    color: .fatColor
-                                )
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                        .padding(.top, 10)
-                        
-                        // What's Next section
-                        VStack(alignment: .leading, spacing: 15) {
-                            HStack(spacing: 8) {
-                                Text("What's Next?")
-                                    .font(.system(size: 24, weight: .bold))
-                                Text("🚀")
-                                    .font(.system(size: 20))
-                            }
-                            .padding(.horizontal, 20)
-                            
-                            ActionCard(
-                                title: "Find a Recipe",
-                                subtitle: "Cook something delicious 🍳",
-                                icon: "fork.knife",
-                                gradient: LinearGradient(
-                                    colors: [Color.appPink, Color(red: 0.9, green: 0.2, blue: 0.2)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            
-                            ActionCard(
-                                title: "Explore Nearby",
-                                subtitle: "Healthy spots near you 📍",
-                                icon: "mappin.circle.fill",
-                                gradient: LinearGradient(
-                                    colors: [Color.appPurple, Color.blue],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            
-                            NavigationLink(destination: BudgetView().environmentObject(appState)) {
-                                ActionCard(
-                                    title: "Budget Tracker",
-                                    subtitle: "Smart spending habits 💰",
-                                    icon: "wallet.pass.fill",
-                                    gradient: LinearGradient(
-                                        colors: [Color.appOrange, Color.yellow],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            
-                            // Motivation card
-                            MotivationCard(
-                                remainingCalories: appState.dailyNutrition.calories.remaining
-                            )
-                        }
-                        .padding(.top, 10)
-                        .padding(.bottom, 20)
-                    }
-                    .background(Color.white)
                 }
             }
-            .ignoresSafeArea(edges: .top)
+            .sheet(isPresented: $showNutritionDetails) {
+                NutritionDetailsView()
+                    .environmentObject(appState)
+            }
         }
-        .sheet(isPresented: $showHealthKitPermission) {
-            HealthKitPermissionView()
-                .environmentObject(appState)
+    }
+    
+    // MARK: - Header Section
+    
+    // MARK: - Header Section (Design System: h1=24pt medium)
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text("Today")
+                        .font(.h1) // 24pt, medium
+                        .foregroundColor(.textPrimary)
+                    
+                    Text(Date().formatted(date: .complete, time: .omitted))
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+                
+                // Crown icon button (premium feature)
+                Button(action: {
+                    HapticFeedback.selection()
+                    // TODO: Navigate to premium screen
+                }) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Radius.md) // Button cornerRadius = 8
+                            .fill(LinearGradient(
+                                colors: [Color(hex: "FF9800"), Color(hex: "FFC107")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
         }
-        .onAppear {
-            // Request HealthKit data if authorized
-            if appState.healthKitService.isAuthorized {
-                Task {
-                    await appState.healthKitService.loadTodayData()
+        .padding(.horizontal, Spacing.md)
+        .padding(.bottom, Spacing.lg)
+    }
+    
+    // MARK: - Nutrition Section
+    
+    private var nutritionSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            SectionHeader(title: "Nutrition Progress")
+            
+            PrimaryCard {
+                VStack(spacing: Spacing.lg) {
+                    // Calories
+                    nutritionProgressRow(
+                        title: "Calories",
+                        icon: "flame.fill",
+                        current: appState.dailyNutrition.calories.current,
+                        target: appState.dailyNutrition.calories.target,
+                        color: .calorieColor
+                    )
+                    
+                    Divider()
+                        .background(Color.textTertiary.opacity(0.2))
+                    
+                    // Protein
+                    nutritionProgressRow(
+                        title: "Protein",
+                        icon: "figure.strengthtraining.traditional",
+                        current: appState.dailyNutrition.protein.current,
+                        target: appState.dailyNutrition.protein.target,
+                        color: .proteinColor
+                    )
                 }
             }
         }
     }
-}
-
-struct StreakCard: View {
-    let streak: Streak
     
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Current Streak")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.9))
+    // MARK: - Nutrition Progress Row (Design System: input=16pt regular)
+    private func nutritionProgressRow(
+        title: String,
+        icon: String,
+        current: Double,
+        target: Double,
+        color: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(color)
+                    .frame(width: 24)
                 
-                HStack(spacing: 8) {
-                    Text("\(streak.currentDays) Days")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.white)
-                    Text("🔥")
-                        .font(.system(size: 24))
+                Text(title)
+                    .font(.input) // 16pt, regular
+                    .foregroundColor(.textPrimary)
+                
+                Spacer()
+                
+                if target > 0 {
+                    Text("\(Int((current / target) * 100))%")
+                        .font(.input) // 16pt, regular
+                        .foregroundColor(.textSecondary)
+                }
+            }
+            
+            if target > 0 {
+                HStack {
+                    Text("\(Int(current)) / \(Int(target))")
+                        .font(.input) // 16pt, regular
+                        .foregroundColor(.textPrimary)
+                    
+                    Spacer()
                 }
                 
-                Text("You're on fire! Keep it going")
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.9))
+                ProgressBar(
+                    value: current,
+                    maxValue: target,
+                    color: color,
+                    height: 8
+                )
+            }
+        }
+    }
+    
+    
+    // MARK: - Quick Actions
+    
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            SectionHeader(title: "Quick Actions")
+            
+            // Recipe Suggestions - Navigate to Recipes tab
+            InteractiveCard(action: {
+                appState.selectedTab = .recipes
+            }) {
+                quickActionContent(
+                    title: "Recipe Suggestions",
+                    subtitle: "Based on your ingredients",
+                    icon: "fork.knife",
+                    iconColor: Color(hex: "4CAF50")
+                )
+            }
+            
+            // Nearby Food Options - Navigate to Nearby tab
+            InteractiveCard(action: {
+                appState.selectedTab = .nearby
+            }) {
+                quickActionContent(
+                    title: "Nearby Food Options",
+                    subtitle: "Find restaurants near you",
+                    icon: "mappin.circle.fill",
+                    iconColor: Color(hex: "9C27B0")
+                )
+            }
+            
+            // Budget Planner - Navigate to Budget view
+            NavigationLink(destination: BudgetView().environmentObject(appState)) {
+                InteractiveCard(action: nil) {
+                    quickActionContent(
+                        title: "Budget Planner",
+                        subtitle: "Track your meal spending",
+                        icon: "wallet.pass.fill",
+                        iconColor: Color(hex: "FFC107")
+                    )
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+    
+    // MARK: - Quick Action Content (Design System: h3=18pt medium)
+    private func quickActionContent(
+        title: String,
+        subtitle: String,
+        icon: String,
+        iconColor: Color
+    ) -> some View {
+        HStack(spacing: Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.md) // Button cornerRadius = 8
+                    .fill(iconColor.opacity(0.1))
+                    .frame(width: 56, height: 56)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(iconColor)
+            }
+            
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(title)
+                    .font(.h3) // 18pt, medium
+                    .foregroundColor(.textPrimary)
+                
+                Text(subtitle)
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
             }
             
             Spacer()
             
-            Text("🎯")
-                .font(.system(size: 40))
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.textTertiary)
         }
-        .padding(20)
-        .background(
-            LinearGradient(
-                colors: [Color.appOrange, Color.appPink],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(20)
+    }
+    
+    // MARK: - Daily Tip (Design System: h3=18pt medium, card padding=16, cornerRadius=lg=10)
+    private var dailyTipCard: some View {
+        HStack(spacing: Spacing.md) {
+            Image(systemName: "target")
+                .font(.system(size: 24))
+                .foregroundColor(.white)
+                .frame(width: 50, height: 50)
+            
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("Daily Tip")
+                    .font(.h3) // 18pt, medium
+                    .foregroundColor(.white)
+                
+                let remaining = Int(appState.dailyNutrition.calories.target - appState.dailyNutrition.calories.current)
+                Text("You're \(remaining) calories away from your goal! Try adding a protein-rich snack this afternoon.")
+                    .font(.bodySmall)
+                    .foregroundColor(.white.opacity(0.9))
+            }
+            
+            Spacer()
+        }
+        .padding(16) // Card.padding = 16
+        .background(Color.primaryAccent)
+        .cornerRadius(Radius.lg) // Card.cornerRadius = Radius.lg (10)
     }
 }
 
-struct NutritionCard: View {
-    let title: String
-    let icon: String
-    let current: Double
-    let target: Double
-    let color: Color
-    
-    var percentage: Double {
-        guard target > 0 else { return 0 }
-        return min((current / target) * 100, 100)
-    }
+// MARK: - Nutrition Details View (Placeholder)
+
+// MARK: - Nutrition Details View (Design System: h1=24pt medium)
+struct NutritionDetailsView: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(color.opacity(0.2))
-                        .frame(width: 50, height: 50)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 24))
-                        .foregroundColor(color)
-                }
+        NavigationStack {
+            ZStack {
+                Color.background.ignoresSafeArea()
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.textSecondary)
-                    
-                    HStack(spacing: 4) {
-                        Text("\(Int(current))")
-                            .font(.system(size: 20, weight: .bold))
-                        Text("/ \(Int(target))")
-                            .font(.system(size: 16, weight: .medium))
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        Text("Nutrition Details")
+                            .font(.h1) // 24pt, medium
+                            .foregroundColor(.textPrimary)
+                        
+                        Text("Detailed breakdown coming soon")
+                            .font(.input) // 16pt, regular
                             .foregroundColor(.textSecondary)
                     }
+                    .padding(Spacing.xl)
                 }
-                
-                Spacer()
-                
-                Text("\(Int(percentage))%")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(color)
             }
-            
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(color.opacity(0.2))
-                        .frame(height: 8)
-                    
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(
-                            LinearGradient(
-                                colors: [color, color.opacity(0.7)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: geometry.size.width * (percentage / 100), height: 8)
+            .navigationTitle("Nutrition Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        HapticFeedback.selection()
+                        dismiss()
+                    }
+                    .foregroundColor(.primaryAccent)
                 }
-
             }
-            .frame(height: 8)
         }
-        .padding(20)
-        .background(Color.cardBackground)
-        .cornerRadius(15)
-        .padding(.horizontal, 20)
     }
 }
-
-struct SmallNutritionCard: View {
-    let title: String
-    let icon: String
-    let value: Double
-    let color: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(color.opacity(0.2))
-                        .frame(width: 40, height: 40)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 20))
-                        .foregroundColor(color)
-                }
-                
-                Spacer()
-            }
-            
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.textSecondary)
-            
-            Text("\(Int(value))g")
-                .font(.system(size: 20, weight: .bold))
-            
-            GeometryReader { geometry in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(color)
-                    .frame(width: geometry.size.width * 0.7, height: 4)
-            }
-            .frame(height: 4)
-        }
-        .padding(15)
-        .frame(maxWidth: .infinity)
-        .background(color.opacity(0.1))
-        .cornerRadius(15)
-    }
-}
-
-struct ActionCard: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let gradient: LinearGradient
-    
-    var body: some View {
-        Button(action: {}) {
-            HStack(spacing: 15) {
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(.white)
-                    .frame(width: 50)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                    
-                    Text(subtitle)
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.9))
-                }
-                
-                Spacer()
-                
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-            }
-            .padding(20)
-            .background(gradient)
-            .cornerRadius(15)
-        }
-        .padding(.horizontal, 20)
-    }
-}
-
-struct MotivationCard: View {
-    let remainingCalories: Double
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.white)
-                
-                Text("Daily Motivation ✨")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
-            }
-            
-            Text("Amazing! You're \(Int(remainingCalories)) cals from your goal. Your future self will thank you! 💪")
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.9))
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(
-                colors: [Color.appPurple, Color.appPink],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
-        .cornerRadius(15)
-        .padding(.horizontal, 20)
-    }
-}
-

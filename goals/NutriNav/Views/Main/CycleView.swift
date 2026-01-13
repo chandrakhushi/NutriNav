@@ -13,42 +13,48 @@ struct CycleView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Cycle Phase Card
-                    if let cyclePhase = appState.user.cyclePhase {
-                        CyclePhaseCard(phase: cyclePhase)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 20)
-                    } else {
-                        NoCycleDataCard {
-                            showCycleEditor = true
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 20)
-                    }
-                    
-                    // Nutrition Adjustments
-                    if let cyclePhase = appState.user.cyclePhase {
-                        CycleNutritionAdjustments(phase: cyclePhase, nutrition: appState.dailyNutrition)
-                            .padding(.horizontal, 20)
-                    }
-                    
-                    // Cycle Tips
-                    CycleTipsCard(phase: appState.user.cyclePhase)
-                        .padding(.horizontal, 20)
-                    
-                    // Sync with HealthKit
-                    if appState.user.gender == .female {
-                        HealthKitCycleSyncCard {
-                            Task {
-                                await appState.syncHealthKitData()
+            ZStack {
+                // White background matching Figma design
+                Color.primaryBackground.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Cycle Phase Card
+                        if let cyclePhase = appState.user.cyclePhase {
+                            CyclePhaseCard(phase: cyclePhase)
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.top, Spacing.xxl)
+                        } else {
+                            NoCycleDataCard {
+                                HapticFeedback.selection()
+                                showCycleEditor = true
                             }
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.top, Spacing.xxl)
                         }
-                        .padding(.horizontal, 20)
+                        
+                        // Nutrition Adjustments
+                        if let cyclePhase = appState.user.cyclePhase {
+                            CycleNutritionAdjustments(phase: cyclePhase, nutrition: appState.dailyNutrition)
+                                .padding(.horizontal, Spacing.md)
+                        }
+                        
+                        // Cycle Tips
+                        CycleTipsCard(phase: appState.user.cyclePhase)
+                            .padding(.horizontal, Spacing.md)
+                        
+                        // Sync with HealthKit
+                        if appState.user.gender == .female {
+                            HealthKitCycleSyncCard {
+                                Task {
+                                    await appState.syncHealthKitData()
+                                }
+                            }
+                            .padding(.horizontal, Spacing.md)
+                        }
                     }
+                    .padding(.bottom, Spacing.xl)
                 }
-                .padding(.bottom, 20)
             }
             .navigationTitle("Cycle Nutrition")
             .sheet(isPresented: $showCycleEditor) {
@@ -59,62 +65,61 @@ struct CycleView: View {
     }
 }
 
+// MARK: - Cycle Phase Card (DesignSystem aligned)
 struct CyclePhaseCard: View {
     let phase: CyclePhase
     
     var phaseInfo: (name: String, emoji: String, color: Color, description: String) {
         switch phase {
         case .menstruation:
-            return ("Menstruation", "🌙", Color.red, "Days 1-5: Focus on iron-rich foods and rest")
+            return ("Menstruation", "🌙", Color.error, "Days 1-5: Focus on iron-rich foods and rest")
         case .follicular:
-            return ("Follicular Phase", "🌱", Color.green, "Days 6-13: Energy is rising, great for workouts")
+            return ("Follicular Phase", "🌱", Color.success, "Days 6-13: Energy is rising, great for workouts")
         case .ovulation:
-            return ("Ovulation", "✨", Color.yellow, "Days 14-16: Peak energy, maximize nutrition")
+            return ("Ovulation", "✨", Color.warning, "Days 14-16: Peak energy, maximize nutrition")
         case .luteal:
-            return ("Luteal Phase", "🍫", Color.orange, "Days 17+: Cravings may increase, focus on balance")
+            return ("Luteal Phase", "🍫", Color.calorieColor, "Days 17+: Cravings may increase, focus on balance")
         }
     }
     
+    // MARK: - Cycle Phase Card (Design System: h2=20pt medium, card padding=16, cornerRadius=lg=10)
     var body: some View {
-        VStack(spacing: 15) {
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Text(phaseInfo.emoji)
-                            .font(.system(size: 32))
-                        Text(phaseInfo.name)
-                            .font(.system(size: 24, weight: .bold))
+        PrimaryCard { // Card.padding=16, Card.cornerRadius=lg=10
+            VStack(spacing: Spacing.md) {
+                HStack {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.sm) {
+                            Text(phaseInfo.emoji)
+                                .font(.system(size: 32))
+                            Text(phaseInfo.name)
+                                .font(.h2) // 20pt, medium
+                                .foregroundColor(.textPrimary)
+                        }
+                        
+                        Text(phaseInfo.description)
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
                     }
                     
-                    Text(phaseInfo.description)
-                        .font(.system(size: 14))
-                        .foregroundColor(.textSecondary)
+                    Spacer()
                 }
                 
-                Spacer()
+                // Cycle progress indicator
+                CycleProgressIndicator(phase: phase)
             }
-            
-            // Cycle progress indicator
-            CycleProgressIndicator(phase: phase)
         }
-        .padding(20)
-        .background(phaseInfo.color.opacity(0.1))
-        .cornerRadius(15)
-        .overlay(
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(phaseInfo.color.opacity(0.3), lineWidth: 2)
-        )
     }
 }
 
+// MARK: - Cycle Progress Indicator (DesignSystem aligned)
 struct CycleProgressIndicator: View {
     let phase: CyclePhase
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.sm) {
             ForEach([CyclePhase.menstruation, .follicular, .ovulation, .luteal], id: \.self) { p in
                 Circle()
-                    .fill(p == phase ? Color.appPurple : Color.gray.opacity(0.3))
+                    .fill(p == phase ? Color.primaryAccent : Color.textTertiary.opacity(0.3))
                     .frame(width: 12, height: 12)
             }
         }
@@ -122,40 +127,38 @@ struct CycleProgressIndicator: View {
     }
 }
 
+// MARK: - No Cycle Data Card (DesignSystem aligned)
 struct NoCycleDataCard: View {
     let action: () -> Void
     
+    // MARK: - No Cycle Data Card (Design System: h2=20pt medium, card padding=16, cornerRadius=lg=10)
     var body: some View {
-        VStack(spacing: 15) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 50))
-                .foregroundColor(.appPink)
-            
-            Text("Track Your Cycle")
-                .font(.system(size: 24, weight: .bold))
-            
-            Text("Sync with HealthKit or enter manually to get personalized nutrition recommendations")
-                .font(.system(size: 14))
-                .foregroundColor(.textSecondary)
-                .multilineTextAlignment(.center)
-            
-            Button(action: action) {
-                Text("Get Started")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 12)
-                    .background(Color.appPink)
-                    .cornerRadius(15)
+        PrimaryCard { // Card.padding=16, Card.cornerRadius=lg=10
+            VStack(spacing: Spacing.md) {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.system(size: 50))
+                    .foregroundColor(.primaryAccent)
+                
+                Text("Track Your Cycle")
+                    .font(.h2) // 20pt, medium
+                    .foregroundColor(.textPrimary)
+                
+                Text("Sync with HealthKit or enter manually to get personalized nutrition recommendations")
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
+                    .multilineTextAlignment(.center)
+                
+                PrimaryButton(
+                    title: "Get Started",
+                    action: action
+                )
             }
+            .padding(Spacing.xl)
         }
-        .padding(30)
-        .frame(maxWidth: .infinity)
-        .background(Color.appPink.opacity(0.1))
-        .cornerRadius(15)
     }
 }
 
+// MARK: - Cycle Nutrition Adjustments (DesignSystem aligned)
 struct CycleNutritionAdjustments: View {
     let phase: CyclePhase
     let nutrition: DailyNutrition
@@ -173,58 +176,55 @@ struct CycleNutritionAdjustments: View {
         }
     }
     
+    // MARK: - Cycle Nutrition Adjustments (Design System: input=16pt regular, card padding=16, cornerRadius=lg=10)
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack(spacing: 8) {
-                Text("📊")
-                    .font(.system(size: 24))
-                Text("Adjusted Nutrition Goals")
-                    .font(.system(size: 20, weight: .bold))
-            }
-            
-            if adjustments.calories > 0 || adjustments.protein > 0 {
-                VStack(alignment: .leading, spacing: 10) {
-                    if adjustments.calories > 0 {
-                        AdjustmentRow(
-                            icon: "flame.fill",
-                            label: "Calories",
-                            adjustment: "+\(Int(adjustments.calories))",
-                            color: .orange
-                        )
+        PrimaryCard { // Card.padding=16, Card.cornerRadius=lg=10
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SectionHeader(title: "Adjusted Nutrition Goals")
+                
+                if adjustments.calories > 0 || adjustments.protein > 0 {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        if adjustments.calories > 0 {
+                            AdjustmentRow(
+                                icon: "flame.fill",
+                                label: "Calories",
+                                adjustment: "+\(Int(adjustments.calories))",
+                                color: .calorieColor
+                            )
+                        }
+                        
+                        if adjustments.protein > 0 {
+                            AdjustmentRow(
+                                icon: "figure.strengthtraining.traditional",
+                                label: "Protein",
+                                adjustment: "+\(Int(adjustments.protein))g",
+                                color: .proteinColor
+                            )
+                        }
                     }
                     
-                    if adjustments.protein > 0 {
-                        AdjustmentRow(
-                            icon: "figure.strengthtraining.traditional",
-                            label: "Protein",
-                            adjustment: "+\(Int(adjustments.protein))g",
-                            color: .blue
-                        )
-                    }
+                    Text(adjustments.message)
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                        .padding(.top, Spacing.xs)
+                } else {
+                    Text("Your nutrition goals are optimized for this phase")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
                 }
-                
-                Text(adjustments.message)
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSecondary)
-                    .padding(.top, 5)
-            } else {
-                Text("Your nutrition goals are optimized for this phase")
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSecondary)
             }
         }
-        .padding(20)
-        .background(Color.cardBackground)
-        .cornerRadius(15)
     }
 }
 
+// MARK: - Adjustment Row (DesignSystem aligned)
 struct AdjustmentRow: View {
     let icon: String
     let label: String
     let adjustment: String
     let color: Color
     
+    // MARK: - Adjustment Row (Design System: input=16pt regular, h3=18pt medium)
     var body: some View {
         HStack {
             Image(systemName: icon)
@@ -232,55 +232,46 @@ struct AdjustmentRow: View {
                 .frame(width: 24)
             
             Text(label)
-                .font(.system(size: 16))
+                .font(.input) // 16pt, regular
+                .foregroundColor(.textPrimary)
             
             Spacer()
             
             Text(adjustment)
-                .font(.system(size: 16, weight: .bold))
+                .font(.h3) // 18pt, medium
                 .foregroundColor(color)
         }
     }
 }
 
+// MARK: - Cycle Tips Card (DesignSystem aligned - using solid color background)
 struct CycleTipsCard: View {
     let phase: CyclePhase?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack(spacing: 8) {
-                Text("💡")
-                    .font(.system(size: 24))
-                Text("Cycle Nutrition Tips")
-                    .font(.system(size: 20, weight: .bold))
-            }
-            
-            if let phase = phase {
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(tipsForPhase(phase), id: \.self) { tip in
-                        HStack(alignment: .top, spacing: 10) {
-                            Text("•")
-                                .foregroundColor(.appPink)
-                            Text(tip)
-                                .font(.system(size: 14))
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SectionHeader(title: "Cycle Nutrition Tips")
+                
+                if let phase = phase {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        ForEach(tipsForPhase(phase), id: \.self) { tip in
+                            HStack(alignment: .top, spacing: Spacing.sm) {
+                                Text("•")
+                                    .foregroundColor(.primaryAccent)
+                                Text(tip)
+                                    .font(.bodySmall)
+                                    .foregroundColor(.textPrimary)
+                            }
                         }
                     }
+                } else {
+                    Text("Track your cycle to get personalized nutrition tips")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
                 }
-            } else {
-                Text("Track your cycle to get personalized nutrition tips")
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSecondary)
             }
         }
-        .padding(20)
-        .background(
-            LinearGradient(
-                colors: [Color.appPink.opacity(0.1), Color.appPurple.opacity(0.1)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(15)
     }
     
     private func tipsForPhase(_ phase: CyclePhase) -> [String] {
@@ -313,37 +304,41 @@ struct CycleTipsCard: View {
     }
 }
 
+// MARK: - HealthKit Cycle Sync Card (DesignSystem aligned)
 struct HealthKitCycleSyncCard: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 15) {
+        InteractiveCard(action: {
+            HapticFeedback.selection()
+            action()
+        }) {
+            HStack(spacing: Spacing.md) {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .font(.system(size: 24))
-                    .foregroundColor(.appPink)
+                    .foregroundColor(.primaryAccent)
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Sync with HealthKit")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.heading3)
+                        .foregroundColor(.textPrimary)
                     
                     Text("Automatically track your cycle from Apple Health")
-                        .font(.system(size: 14))
+                        .font(.bodySmall)
                         .foregroundColor(.textSecondary)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .foregroundColor(.textSecondary)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.textTertiary)
             }
-            .padding(15)
-            .background(Color.cardBackground)
-            .cornerRadius(15)
         }
     }
 }
 
+// MARK: - Cycle Editor View (DesignSystem aligned)
 struct CycleEditorView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
@@ -352,80 +347,90 @@ struct CycleEditorView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 30) {
-                VStack(spacing: 12) {
-                    Text("Track Your Cycle")
-                        .font(.system(size: 28, weight: .bold))
-                    
-                    Text("Help us personalize your nutrition recommendations")
-                        .font(.system(size: 16))
-                        .foregroundColor(.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                .padding(.top, 40)
+            ZStack {
+                // White background matching Figma design
+                Color.background.ignoresSafeArea() // Design System: background = #ffffff
                 
-                // Last period date
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Last Period Start Date")
-                        .font(.system(size: 18, weight: .semibold))
-                        .padding(.horizontal, 20)
-                    
-                    DatePicker("", selection: $lastPeriodDate, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                        .padding(.horizontal, 20)
-                }
-                
-                // Phase selection
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Current Phase")
-                        .font(.system(size: 18, weight: .semibold))
-                        .padding(.horizontal, 20)
-                    
-                    VStack(spacing: 12) {
-                        ForEach([CyclePhase.menstruation, .follicular, .ovulation, .luteal], id: \.self) { phase in
-                            CyclePhaseButton(phase: phase, isSelected: selectedPhase == phase) {
-                                selectedPhase = phase
-                            }
+                ScrollView {
+                    VStack(spacing: Spacing.xl) {
+                        VStack(spacing: Spacing.sm) {
+                            Text("Track Your Cycle")
+                                .font(.h1) // 24pt, medium
+                                .foregroundColor(.textPrimary)
+                            
+                            Text("Help us personalize your nutrition recommendations")
+                                .font(.input) // 16pt, regular
+                                .foregroundColor(.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, Spacing.xl)
                         }
+                        .padding(.top, Spacing.xxl)
+                        
+                        // Last period date
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("Last Period Start Date")
+                                .font(.h3) // 18pt, medium
+                                .foregroundColor(.textPrimary)
+                                .padding(.horizontal, Spacing.md)
+                            
+                            DatePicker("", selection: $lastPeriodDate, displayedComponents: .date)
+                                .datePickerStyle(.compact)
+                                .padding(.horizontal, Spacing.md)
+                        }
+                        
+                        // Phase selection
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("Current Phase")
+                                .font(.h3) // 18pt, medium
+                                .foregroundColor(.textPrimary)
+                                .padding(.horizontal, Spacing.md)
+                            
+                            VStack(spacing: Spacing.md) {
+                                ForEach([CyclePhase.menstruation, .follicular, .ovulation, .luteal], id: \.self) { phase in
+                                    CyclePhaseButton(phase: phase, isSelected: selectedPhase == phase) {
+                                        HapticFeedback.selection()
+                                        selectedPhase = phase
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, Spacing.md)
+                        }
+                        
+                        Spacer(minLength: Spacing.xl)
+                        
+                        // Save button - using DesignSystem
+                        PrimaryButton(
+                            title: "Save",
+                            action: {
+                                if let phase = selectedPhase {
+                                    appState.user.cyclePhase = phase
+                                }
+                                HapticFeedback.success()
+                                dismiss()
+                            }
+                        )
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.bottom, Spacing.xl)
+                        .disabled(selectedPhase == nil)
                     }
-                    .padding(.horizontal, 20)
                 }
-                
-                Spacer()
-                
-                Button(action: {
-                    if let phase = selectedPhase {
-                        appState.user.cyclePhase = phase
-                    }
-                    dismiss()
-                }) {
-                    Text("Save")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.appPink)
-                        .cornerRadius(15)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-                .disabled(selectedPhase == nil)
-                .opacity(selectedPhase == nil ? 0.6 : 1.0)
             }
             .navigationTitle("Cycle Tracking")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
+                        HapticFeedback.selection()
                         dismiss()
                     }
+                    .foregroundColor(.primaryAccent)
                 }
             }
         }
     }
 }
 
+// MARK: - Cycle Phase Button (DesignSystem aligned)
 struct CyclePhaseButton: View {
     let phase: CyclePhase
     let isSelected: Bool
@@ -433,36 +438,37 @@ struct CyclePhaseButton: View {
     
     var phaseInfo: (name: String, emoji: String, color: Color) {
         switch phase {
-        case .menstruation: return ("Menstruation", "🌙", Color.red)
-        case .follicular: return ("Follicular Phase", "🌱", Color.green)
-        case .ovulation: return ("Ovulation", "✨", Color.yellow)
-        case .luteal: return ("Luteal Phase", "🍫", Color.orange)
+        case .menstruation: return ("Menstruation", "🌙", Color.error)
+        case .follicular: return ("Follicular Phase", "🌱", Color.success)
+        case .ovulation: return ("Ovulation", "✨", Color.warning)
+        case .luteal: return ("Luteal Phase", "🍫", Color.calorieColor)
         }
     }
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 15) {
+            HStack(spacing: Spacing.md) {
                 Text(phaseInfo.emoji)
                     .font(.system(size: 32))
                 
                 Text(phaseInfo.name)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.h3) // 18pt, medium
                     .foregroundColor(.textPrimary)
                 
                 Spacer()
                 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(.success)
+                        .font(.system(size: 20))
                 }
             }
-            .padding(15)
-            .background(isSelected ? phaseInfo.color.opacity(0.1) : Color.cardBackground)
-            .cornerRadius(12)
+            .padding(Spacing.md)
+            .background(isSelected ? phaseInfo.color.opacity(0.1) : Color.white)
+            .cornerRadius(Radius.md) // Button cornerRadius = 8
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? phaseInfo.color : Color.clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Radius.md) // Button cornerRadius = 8
+                    .stroke(isSelected ? phaseInfo.color : Color.textTertiary.opacity(0.2), lineWidth: isSelected ? 2 : 1)
             )
         }
     }

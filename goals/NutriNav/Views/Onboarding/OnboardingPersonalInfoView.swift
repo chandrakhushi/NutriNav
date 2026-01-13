@@ -15,140 +15,132 @@ struct OnboardingPersonalInfoView: View {
     
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color.appPurple, Color.appPink],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // White background matching Figma design
+            Color.primaryBackground.ignoresSafeArea()
             
-            VStack(spacing: 30) {
-                // Progress indicator
-                VStack(spacing: 10) {
-                    HStack {
-                        Text("Step 1 of 4")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Spacer()
-                        
-                        HStack(spacing: 4) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 12))
-                            Text("25% there!")
-                                .font(.system(size: 14, weight: .medium))
+            ScrollView {
+                VStack(spacing: Spacing.xl) {
+                    // Progress indicator
+                    VStack(spacing: Spacing.sm) {
+                        HStack {
+                            Text("Step 1 of 4")
+                                .font(.bodySmall)
+                                .foregroundColor(.textSecondary)
+                            
+                            Spacer()
+                            
+                            HStack(spacing: Spacing.xs) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 12))
+                                Text("25% there!")
+                                    .font(.bodySmall)
+                            }
+                            .foregroundColor(.warning)
                         }
-                        .foregroundColor(.yellow)
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    ProgressView(value: 0.25)
-                        .tint(.yellow)
-                        .background(Color.white.opacity(0.3))
-                        .scaleEffect(x: 1, y: 2, anchor: .center)
-                        .padding(.horizontal, 20)
-                }
-                .padding(.top, 20)
-                
-                Spacer()
-                
-                // Title
-                VStack(spacing: 8) {
-                    HStack(spacing: 8) {
-                        Text("Let's Get Personal!")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(.white)
+                        .padding(.horizontal, Spacing.md)
                         
-                        Text("✨")
-                            .font(.system(size: 20))
+                        ProgressView(value: 0.25)
+                            .tint(.primaryAccent)
+                            .background(Color.textTertiary.opacity(0.2))
+                            .scaleEffect(x: 1, y: 2, anchor: .center)
+                            .padding(.horizontal, Spacing.md)
                     }
+                    .padding(.top, Spacing.xxl)
                     
-                    Text("Tell us about you so we can customize your experience")
-                        .font(.system(size: 16))
-                        .foregroundColor(.white.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                
-                Spacer()
-                
-                // Age input
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("How old are you?")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                    
-                    HStack {
-                        TextField("", value: $age, format: .number)
-                            .font(.system(size: 24, weight: .bold))
-                            .keyboardType(.numberPad)
+                    // Title
+                    VStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.xs) {
+                            Text("Let's Get Personal!")
+                                .font(.heading1)
+                                .foregroundColor(.textPrimary)
+                            
+                            Text("✨")
+                                .font(.body)
+                        }
+                        
+                        Text("Tell us about you so we can customize your experience")
+                            .font(.body)
+                            .foregroundColor(.textSecondary)
                             .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(15)
-                            .overlay(
-                                HStack {
-                                    Spacer()
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .foregroundColor(.gray)
-                                        .padding(.trailing, 15)
-                                }
-                            )
+                            .padding(.horizontal, Spacing.xl)
                     }
-                    .padding(.horizontal, 20)
-                }
-                
-                // Gender selection
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Gender")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
+                    .padding(.top, Spacing.xl)
                     
-                    HStack(spacing: 15) {
-                        GenderButton(
-                            gender: .female,
-                            isSelected: selectedGender == .female
-                        ) {
-                            selectedGender = .female
-                        }
+                    // Age input
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("How old are you?")
+                            .font(.heading3)
+                            .foregroundColor(.textPrimary)
+                            .padding(.horizontal, Spacing.md)
                         
-                        GenderButton(
-                            gender: .male,
-                            isSelected: selectedGender == .male
-                        ) {
-                            selectedGender = .male
+                        HStack {
+                            TextField("", value: $age, format: .number)
+                                .font(.heading2)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(Spacing.md)
+                                .background(Color.white)
+                                .cornerRadius(CornerRadius.button)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: CornerRadius.button)
+                                        .stroke(Color.textTertiary.opacity(0.2), lineWidth: 1)
+                                )
+                                .overlay(
+                                    HStack {
+                                        Spacer()
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .foregroundColor(.textTertiary)
+                                            .padding(.trailing, Spacing.md)
+                                    }
+                                )
                         }
+                        .padding(.horizontal, Spacing.md)
                     }
-                    .padding(.horizontal, 20)
-                }
-                
-                Spacer()
-                
-                // Continue button
-                Button(action: {
-                    appState.user.age = age
-                    appState.user.gender = selectedGender
-                    navigateToNext = true
-                }) {
-                    HStack {
-                        Text("Continue")
-                            .font(.system(size: 18, weight: .semibold))
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 16, weight: .semibold))
+                    
+                    // Gender selection
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("Gender")
+                            .font(.heading3)
+                            .foregroundColor(.textPrimary)
+                            .padding(.horizontal, Spacing.md)
+                        
+                        HStack(spacing: Spacing.md) {
+                            GenderButton(
+                                gender: .female,
+                                isSelected: selectedGender == .female
+                            ) {
+                                HapticFeedback.selection()
+                                selectedGender = .female
+                            }
+                            
+                            GenderButton(
+                                gender: .male,
+                                isSelected: selectedGender == .male
+                            ) {
+                                HapticFeedback.selection()
+                                selectedGender = .male
+                            }
+                        }
+                        .padding(.horizontal, Spacing.md)
                     }
-                    .foregroundColor(.appPurple)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(15)
+                    
+                    Spacer(minLength: Spacing.xl)
+                    
+                    // Continue button - using DesignSystem PrimaryButton
+                    PrimaryButton(
+                        title: "Continue",
+                        action: {
+                            appState.user.age = age
+                            appState.user.gender = selectedGender
+                            navigateToNext = true
+                        },
+                        icon: "arrow.right"
+                    )
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.xl)
+                    .disabled(selectedGender == nil)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-                .disabled(selectedGender == nil)
-                .opacity(selectedGender == nil ? 0.6 : 1.0)
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -158,6 +150,7 @@ struct OnboardingPersonalInfoView: View {
     }
 }
 
+// MARK: - Gender Button (DesignSystem aligned)
 struct GenderButton: View {
     let gender: Gender
     let isSelected: Bool
@@ -165,20 +158,20 @@ struct GenderButton: View {
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.sm) {
                 Text(gender.emoji)
                     .font(.system(size: 24))
                 Text(gender.rawValue)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.heading3)
             }
-            .foregroundColor(isSelected ? .appPurple : .white)
+            .foregroundColor(isSelected ? .white : .primaryAccent)
             .frame(maxWidth: .infinity)
-            .padding()
-            .background(isSelected ? Color.white : Color.appPurple.opacity(0.3))
-            .cornerRadius(15)
+            .padding(Spacing.md)
+            .background(isSelected ? Color.primaryAccent : Color.white)
+            .cornerRadius(CornerRadius.button)
             .overlay(
-                RoundedRectangle(cornerRadius: 15)
-                    .stroke(isSelected ? Color.appPurple : Color.appPurple.opacity(0.5), lineWidth: 2)
+                RoundedRectangle(cornerRadius: CornerRadius.button)
+                    .stroke(Color.primaryAccent, lineWidth: 1)
             )
         }
     }

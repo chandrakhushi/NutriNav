@@ -2,7 +2,7 @@
 //  HealthKitComponents.swift
 //  NutriNav
 //
-//  HealthKit UI components
+//  HealthKit UI components - using DesignSystem
 //
 
 import SwiftUI
@@ -13,97 +13,95 @@ struct ActivitySummaryCard: View {
     let workouts: [Activity]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack(spacing: 8) {
-                Text("Today's Activity")
-                    .font(.system(size: 20, weight: .bold))
-                Text("🏃")
-                    .font(.system(size: 18))
-            }
-            
-            HStack(spacing: 20) {
-                // Steps
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "figure.walk")
-                            .foregroundColor(.blue)
-                        Text("Steps")
-                            .font(.system(size: 14))
-                            .foregroundColor(.textSecondary)
-                    }
-                    Text("\(Int(steps))")
-                        .font(.system(size: 24, weight: .bold))
-                }
-                .frame(maxWidth: .infinity)
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SectionHeader(title: "Today's Activity")
                 
-                Divider()
-                    .frame(height: 40)
-                
-                // Active Calories
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "flame.fill")
-                            .foregroundColor(.orange)
-                        Text("Burned")
-                            .font(.system(size: 14))
-                            .foregroundColor(.textSecondary)
-                    }
-                    Text("\(Int(activeCalories))")
-                        .font(.system(size: 24, weight: .bold))
-                    Text("kcal")
-                        .font(.system(size: 12))
-                        .foregroundColor(.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-                
-                Divider()
-                    .frame(height: 40)
-                
-                // Workouts
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .foregroundColor(.purple)
-                        Text("Workouts")
-                            .font(.system(size: 14))
-                            .foregroundColor(.textSecondary)
-                    }
-                    Text("\(workouts.count)")
-                        .font(.system(size: 24, weight: .bold))
-                }
-                .frame(maxWidth: .infinity)
-            }
-            
-            // Recent workouts list
-            if !workouts.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recent Workouts")
-                        .font(.system(size: 16, weight: .semibold))
-                        .padding(.top, 8)
-                    
-                    ForEach(workouts.prefix(3)) { workout in
-                        HStack {
-                            Text(workout.type.emoji)
-                                .font(.system(size: 20))
-                            Text(workout.name)
-                                .font(.system(size: 14, weight: .medium))
-                            Spacer()
-                            Text("\(Int(workout.duration / 60))m")
-                                .font(.system(size: 12))
-                                .foregroundColor(.textSecondary)
-                            Text("\(Int(workout.caloriesBurned)) kcal")
-                                .font(.system(size: 12))
+                HStack(spacing: Spacing.lg) {
+                    // Steps
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "figure.walk")
+                                .foregroundColor(.primaryAccent)
+                            Text("Steps")
+                                .font(.label)
                                 .foregroundColor(.textSecondary)
                         }
-                        .padding(.vertical, 4)
+                        Text("\(Int(steps))")
+                            .font(.h2) // 20pt, medium
+                            .foregroundColor(.textPrimary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    Divider()
+                        .frame(height: 40)
+                    
+                    // Active Calories
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "flame.fill")
+                                .foregroundColor(.calorieColor)
+                            Text("Burned")
+                                .font(.label)
+                                .foregroundColor(.textSecondary)
+                        }
+                        Text("\(Int(activeCalories))")
+                            .font(.h2) // 20pt, medium
+                            .foregroundColor(.textPrimary)
+                        Text("kcal")
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    Divider()
+                        .frame(height: 40)
+                    
+                    // Workouts
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        HStack(spacing: Spacing.xs) {
+                            Image(systemName: "figure.strengthtraining.traditional")
+                                .foregroundColor(.proteinColor)
+                            Text("Workouts")
+                                .font(.label)
+                                .foregroundColor(.textSecondary)
+                        }
+                        Text("\(workouts.count)")
+                            .font(.h2) // 20pt, medium
+                            .foregroundColor(.textPrimary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                
+                // Recent workouts list
+                if !workouts.isEmpty {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("Recent Workouts")
+                            .font(.h3) // 18pt, medium
+                            .foregroundColor(.textPrimary)
+                            .padding(.top, Spacing.sm)
+                        
+                        ForEach(workouts.prefix(3)) { workout in
+                            HStack {
+                                Text(workout.type.emoji)
+                                    .font(.system(size: 20))
+                                Text(workout.name)
+                                    .font(.input) // 16pt, regular
+                                    .foregroundColor(.textPrimary)
+                                Spacer()
+                                Text("\(Int(workout.duration / 60))m")
+                                    .font(.bodySmall)
+                                    .foregroundColor(.textSecondary)
+                                Text("\(Int(workout.caloriesBurned)) kcal")
+                                    .font(.bodySmall)
+                                    .foregroundColor(.textSecondary)
+                            }
+                            .padding(.vertical, Spacing.xs)
+                        }
                     }
                 }
             }
         }
-        .padding(20)
-        .background(Color.cardBackground)
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
 }
 
@@ -111,35 +109,28 @@ struct HealthKitPermissionCard: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 15) {
+        InteractiveCard(action: action) {
+            HStack(spacing: Spacing.md) {
                 Image(systemName: "heart.text.square.fill")
                     .font(.system(size: 32))
-                    .foregroundColor(.red)
+                    .foregroundColor(.error)
                 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Connect Apple Health")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.h3) // 18pt, medium
                         .foregroundColor(.textPrimary)
                     
                     Text("Sync steps, workouts & calories automatically")
-                        .font(.system(size: 14))
+                        .font(.bodySmall)
                         .foregroundColor(.textSecondary)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.textSecondary)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.textTertiary)
             }
-            .padding(20)
-            .background(Color.cardBackground)
-            .cornerRadius(15)
-            .overlay(
-                RoundedRectangle(cornerRadius: 15)
-                    .stroke(Color.appPurple.opacity(0.3), lineWidth: 2)
-            )
         }
     }
 }
@@ -152,90 +143,90 @@ struct HealthKitPermissionView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 30) {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(Color.red.opacity(0.1))
-                        .frame(width: 100, height: 100)
-                    
-                    Image(systemName: "heart.text.square.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.red)
-                }
-                .padding(.top, 40)
+            ZStack {
+                Color.background.ignoresSafeArea() // Design System: background = #ffffff
                 
-                // Title
-                VStack(spacing: 12) {
-                    Text("Connect Apple Health")
-                        .font(.system(size: 28, weight: .bold))
-                    
-                    Text("Sync your activity data to get personalized nutrition recommendations")
-                        .font(.system(size: 16))
-                        .foregroundColor(.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                
-                // Benefits
-                VStack(alignment: .leading, spacing: 15) {
-                    BenefitRow(icon: "figure.walk", text: "Track steps automatically")
-                    BenefitRow(icon: "flame.fill", text: "Monitor calories burned")
-                    BenefitRow(icon: "figure.strengthtraining.traditional", text: "Sync workouts from Apple Watch")
-                    if appState.user.gender == .female {
-                        BenefitRow(icon: "calendar", text: "Track menstrual cycle")
-                    }
-                }
-                .padding(.horizontal, 40)
-                
-                Spacer()
-                
-                // Buttons
-                VStack(spacing: 15) {
-                    Button(action: {
-                        isRequesting = true
-                        Task {
-                            await appState.requestHealthKitAuthorization()
-                            await appState.syncHealthKitData()
-                            isRequesting = false
-                            if appState.healthKitService.isAuthorized {
-                                dismiss()
+                ScrollView {
+                    VStack(spacing: Spacing.xl) {
+                        // Icon
+                        ZStack {
+                            Circle()
+                                .fill(Color.error.opacity(0.1))
+                                .frame(width: 100, height: 100)
+                            
+                            Image(systemName: "heart.text.square.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(.error)
+                        }
+                        .padding(.top, Spacing.xl)
+                        
+                        // Title
+                        VStack(spacing: Spacing.md) {
+                            Text("Connect Apple Health")
+                                .font(.h1) // 24pt, medium
+                                .foregroundColor(.textPrimary)
+                            
+                            Text("Sync your activity data to get personalized nutrition recommendations")
+                                .font(.input) // 16pt, regular
+                                .foregroundColor(.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, Spacing.xl)
+                        }
+                        
+                        // Benefits
+                        VStack(alignment: .leading, spacing: Spacing.md) {
+                            BenefitRow(icon: "figure.walk", text: "Track steps automatically")
+                            BenefitRow(icon: "flame.fill", text: "Monitor calories burned")
+                            BenefitRow(icon: "figure.strengthtraining.traditional", text: "Sync workouts from Apple Watch")
+                            if appState.user.gender == .female {
+                                BenefitRow(icon: "calendar", text: "Track menstrual cycle")
                             }
                         }
-                    }) {
-                        HStack {
-                            if isRequesting {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
-                                Text("Connect Health")
-                                    .font(.system(size: 18, weight: .semibold))
-                            }
+                        .padding(.horizontal, Spacing.xl)
+                        
+                        Spacer()
+                        
+                        // Buttons
+                        VStack(spacing: Spacing.md) {
+                            PrimaryButton(
+                                title: isRequesting ? "Connecting..." : "Connect Health",
+                                action: {
+                                    HapticFeedback.impact()
+                                    isRequesting = true
+                                    Task {
+                                        await appState.requestHealthKitAuthorization()
+                                        await appState.syncHealthKitData()
+                                        isRequesting = false
+                                        if appState.healthKitService.isAuthorized {
+                                            HapticFeedback.success()
+                                            dismiss()
+                                        } else {
+                                            HapticFeedback.error()
+                                        }
+                                    }
+                                },
+                                icon: "heart.fill",
+                                isEnabled: !isRequesting
+                            )
+                            
+                            TextButton(
+                                title: "Maybe Later",
+                                action: {
+                                    HapticFeedback.selection()
+                                    dismiss()
+                                }
+                            )
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.red)
-                        .cornerRadius(15)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.bottom, Spacing.xl)
+                        
+                        if let error = errorMessage {
+                            Text(error)
+                                .font(.bodySmall)
+                                .foregroundColor(.error)
+                                .padding(.horizontal, Spacing.md)
+                        }
                     }
-                    .disabled(isRequesting)
-                    
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Text("Maybe Later")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.textSecondary)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-                
-                if let error = errorMessage {
-                    Text(error)
-                        .font(.system(size: 14))
-                        .foregroundColor(.red)
-                        .padding(.horizontal, 20)
                 }
             }
             .navigationTitle("Health Integration")
@@ -243,8 +234,10 @@ struct HealthKitPermissionView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Close") {
+                        HapticFeedback.selection()
                         dismiss()
                     }
+                    .foregroundColor(.primaryAccent)
                 }
             }
         }
@@ -256,15 +249,15 @@ struct BenefitRow: View {
     let text: String
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             Image(systemName: icon)
                 .font(.system(size: 20))
-                .foregroundColor(.appPurple)
+                .foregroundColor(.primaryAccent)
                 .frame(width: 30)
             
             Text(text)
-                .font(.system(size: 16))
+                .font(.input) // 16pt, regular
+                .foregroundColor(.textPrimary)
         }
     }
 }
-

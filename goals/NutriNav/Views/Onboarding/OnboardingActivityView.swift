@@ -14,117 +14,95 @@ struct OnboardingActivityView: View {
     
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color.appOrange, Color.appPink],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // White background matching Figma design
+            Color.primaryBackground.ignoresSafeArea()
             
-            VStack(spacing: 30) {
-                // Progress indicator
-                VStack(spacing: 10) {
-                    HStack {
-                        Text("Step 3 of 4")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Spacer()
-                        
-                        HStack(spacing: 4) {
-                            Text("✨")
-                                .font(.system(size: 12))
-                            Text("75% there!")
-                                .font(.system(size: 14, weight: .medium))
-                        }
-                        .foregroundColor(.yellow)
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    ProgressView(value: 0.75)
-                        .tint(.yellow)
-                        .background(Color.white.opacity(0.3))
-                        .scaleEffect(x: 1, y: 2, anchor: .center)
-                        .padding(.horizontal, 20)
-                }
-                .padding(.top, 20)
-                
-                Spacer()
-                
-                // Title
-                VStack(spacing: 8) {
-                    HStack(spacing: 8) {
-                        Text("How Active Are You?")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(.white)
-                        
-                        Text("💪")
-                            .font(.system(size: 24))
-                    }
-                    
-                    Text("Be honest - this helps us nail your calorie needs!")
-                        .font(.system(size: 16))
-                        .foregroundColor(.white.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                
-                Spacer()
-                
-                // Activity options
-                VStack(spacing: 12) {
-                    ForEach(ActivityLevel.allCases, id: \.self) { activity in
-                        ActivityButton(
-                            activity: activity,
-                            isSelected: selectedActivity == activity
-                        ) {
-                            selectedActivity = activity
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-                
-                Spacer()
-                
-                // Navigation buttons
-                HStack(spacing: 15) {
-                    Button(action: {
-                        // Go back
-                    }) {
-                        Text("Back")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.white.opacity(0.2))
-                            .cornerRadius(15)
-                    }
-                    
-                    Button(action: {
-                        appState.user.activityLevel = selectedActivity
-                        navigateToNext = true
-                    }) {
+            ScrollView {
+                VStack(spacing: Spacing.xl) {
+                    // Progress indicator
+                    VStack(spacing: Spacing.sm) {
                         HStack {
-                            Text("Continue")
-                                .font(.system(size: 18, weight: .semibold))
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 16, weight: .semibold))
+                            Text("Step 3 of 4")
+                                .font(.bodySmall)
+                                .foregroundColor(.textSecondary)
+                            
+                            Spacer()
+                            
+                            HStack(spacing: Spacing.xs) {
+                                Text("✨")
+                                    .font(.system(size: 12))
+                                Text("75% there!")
+                                    .font(.bodySmall)
+                            }
+                            .foregroundColor(.warning)
                         }
-                        .foregroundColor(.appPurple)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(15)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 15)
-                                .stroke(Color.black.opacity(0.1), lineWidth: 1)
+                        .padding(.horizontal, Spacing.md)
+                        
+                        ProgressView(value: 0.75)
+                            .tint(.primaryAccent)
+                            .background(Color.textTertiary.opacity(0.2))
+                            .scaleEffect(x: 1, y: 2, anchor: .center)
+                            .padding(.horizontal, Spacing.md)
+                    }
+                    .padding(.top, Spacing.xxl)
+                    
+                    // Title
+                    VStack(spacing: Spacing.sm) {
+                        HStack(spacing: Spacing.xs) {
+                            Text("How Active Are You?")
+                                .font(.heading1)
+                                .foregroundColor(.textPrimary)
+                            
+                            Text("💪")
+                                .font(.body)
+                        }
+                        
+                        Text("Be honest - this helps us nail your calorie needs!")
+                            .font(.body)
+                            .foregroundColor(.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, Spacing.xl)
+                    }
+                    .padding(.top, Spacing.xl)
+                    
+                    // Activity options
+                    VStack(spacing: Spacing.md) {
+                        ForEach(ActivityLevel.allCases, id: \.self) { activity in
+                            ActivityButton(
+                                activity: activity,
+                                isSelected: selectedActivity == activity
+                            ) {
+                                HapticFeedback.selection()
+                                selectedActivity = activity
+                            }
+                        }
+                    }
+                    .padding(.horizontal, Spacing.md)
+                    
+                    Spacer(minLength: Spacing.xl)
+                    
+                    // Navigation buttons - using DesignSystem
+                    HStack(spacing: Spacing.md) {
+                        SecondaryButton(
+                            title: "Back",
+                            action: {
+                                // Go back handled by navigation
+                            }
+                        )
+                        
+                        PrimaryButton(
+                            title: "Continue",
+                            action: {
+                                appState.user.activityLevel = selectedActivity
+                                navigateToNext = true
+                            },
+                            icon: "arrow.right"
                         )
                     }
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.xl)
+                    .disabled(selectedActivity == nil)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-                .disabled(selectedActivity == nil)
-                .opacity(selectedActivity == nil ? 0.6 : 1.0)
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -134,6 +112,7 @@ struct OnboardingActivityView: View {
     }
 }
 
+// MARK: - Activity Button (DesignSystem aligned)
 struct ActivityButton: View {
     let activity: ActivityLevel
     let isSelected: Bool
@@ -141,25 +120,35 @@ struct ActivityButton: View {
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 15) {
+            HStack(spacing: Spacing.md) {
                 Text(activity.emoji)
                     .font(.system(size: 28))
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(activity.rawValue)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(isSelected ? .appPurple : .white)
+                        .font(.heading3)
+                        .foregroundColor(isSelected ? .textPrimary : .textPrimary)
                     
                     Text(activity.description)
-                        .font(.system(size: 14))
-                        .foregroundColor(isSelected ? .appPurple.opacity(0.8) : .white.opacity(0.8))
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
                 }
                 
                 Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.primaryAccent)
+                        .font(.system(size: 20))
+                }
             }
-            .padding()
-            .background(isSelected ? Color.white : Color.white.opacity(0.2))
-            .cornerRadius(15)
+            .padding(Spacing.md)
+            .background(isSelected ? Color.primaryAccent.opacity(0.1) : Color.white)
+            .cornerRadius(CornerRadius.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.card)
+                    .stroke(isSelected ? Color.primaryAccent : Color.textTertiary.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+            )
         }
     }
 }

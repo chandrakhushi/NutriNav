@@ -13,113 +13,84 @@ struct OnboardingWelcomeView: View {
     
     var body: some View {
         ZStack {
-            // Gradient background
-            LinearGradient(
-                colors: [Color.appPurple, Color.appPink, Color.appOrange],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // Light green/off-white background
+            Color(hex: "F1F8F4")
+                .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 30) {
+                VStack(spacing: Spacing.xl) {
                     Spacer()
                         .frame(height: 60)
                     
                     // App Icon
                     ZStack {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.white)
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.primaryAccent)
                             .frame(width: 100, height: 100)
                         
                         Image(systemName: "leaf.fill")
                             .font(.system(size: 50))
-                            .foregroundColor(.green)
+                            .foregroundColor(.white)
                     }
-                    .overlay(
-                        Circle()
-                            .fill(Color.yellow)
-                            .frame(width: 30, height: 30)
-                            .overlay(
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.white)
-                            )
-                            .offset(x: 35, y: -35)
-                    )
                     
-                    // App Name
+                    // App Name (Design System: h1=24pt medium)
                     Text("NutriNav")
-                        .font(.system(size: 42, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(.h1) // 24pt, medium
+                        .foregroundColor(.textPrimary)
                     
-                    // Tagline
-                    Text("Your glow-up starts here ✨")
-                        .font(.system(size: 18))
-                        .foregroundColor(.white.opacity(0.9))
+                    // Tagline (Design System: input=16pt regular)
+                    Text("Your smart nutrition assistant")
+                        .font(.input) // 16pt, regular
+                        .foregroundColor(.textSecondary)
                     
                     // Feature Cards
-                    VStack(spacing: 15) {
+                    VStack(spacing: Spacing.lg) {
                         FeatureCard(
-                            icon: "chart.bar.fill",
-                            title: "Track Your Wins",
-                            subtitle: "Hit your goals & celebrate progress"
+                            icon: "chart.line.uptrend.xyaxis",
+                            title: "Track Your Goals",
+                            subtitle: "Monitor calories, protein, and hit your nutrition targets."
                         )
                         
                         FeatureCard(
-                            icon: "fork.knife",
-                            title: "Delicious Recipes",
-                            subtitle: "Eat well without the stress"
+                            icon: "apple.fill",
+                            title: "Smart Recipes",
+                            subtitle: "Get personalized recipes based on what you have."
                         )
                         
                         FeatureCard(
-                            icon: "figure.strengthtraining.traditional",
-                            title: "Feel Amazing",
-                            subtitle: "Energy, confidence, & balance"
+                            icon: "mappin.circle.fill",
+                            title: "Find Nearby Options",
+                            subtitle: "Discover restaurants with nutrition info and budget filters."
                         )
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.xl)
                     
                     // CTA Buttons
-                    VStack(spacing: 15) {
-                        Button(action: {
-                            navigateToOnboarding = true
-                        }) {
-                            HStack {
-                                Text("Let's Glow!")
-                                    .font(.system(size: 18, weight: .semibold))
-                                Text("✨")
-                                    .font(.system(size: 16))
+                    VStack(spacing: Spacing.md) {
+                        PrimaryButton(
+                            title: "Get Started",
+                            action: {
+                                navigateToOnboarding = true
                             }
-                            .foregroundColor(.appPurple)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(15)
-                        }
+                        )
                         
-                        Button(action: {
-                            // Handle existing account
-                        }) {
-                            Text("I Already Have an Account")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.appPink.opacity(0.3))
-                                .cornerRadius(15)
-                        }
+                        SecondaryButton(
+                            title: "Sign In",
+                            action: {
+                                // TODO: Navigate to sign in
+                            }
+                        )
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.lg)
                     
                     // Disclaimer
-                    Text("Free to start • No credit card required")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.7))
-                        .padding(.top, 10)
-                        .padding(.bottom, 40)
+                    Text("By continuing, you agree to our Terms & Privacy Policy.")
+                        .font(.bodySmall)
+                        .foregroundColor(.textTertiary)
+                        .padding(.top, Spacing.md)
+                        .padding(.bottom, Spacing.xl)
                 }
             }
         }
@@ -135,27 +106,30 @@ struct FeatureCard: View {
     let subtitle: String
     
     var body: some View {
-        HStack(spacing: 15) {
-            Image(systemName: icon)
-                .font(.system(size: 24))
-                .foregroundColor(.white)
-                .frame(width: 40)
+        HStack(spacing: Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(Color.primaryAccent.opacity(0.1))
+                    .frame(width: 50, height: 50)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(.primaryAccent)
+            }
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(title)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(.h3) // 18pt, medium
+                    .foregroundColor(.textPrimary)
                 
                 Text(subtitle)
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.9))
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
             }
             
             Spacer()
         }
-        .padding()
-        .background(Color.appPink.opacity(0.3))
-        .cornerRadius(15)
+        .padding(Spacing.md)
     }
 }
 

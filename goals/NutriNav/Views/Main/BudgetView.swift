@@ -15,54 +15,59 @@ struct BudgetView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Budget Summary Card
-                    BudgetSummaryCard(budget: budget)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 20)
-                    
-                    // Weekly Spending Chart
-                    WeeklySpendingChart(budget: budget, expenses: expenses)
-                        .padding(.horizontal, 20)
-                    
-                    // Recent Expenses
-                    VStack(alignment: .leading, spacing: 15) {
-                        HStack {
-                            Text("Recent Expenses")
-                                .font(.system(size: 24, weight: .bold))
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                showBudgetEditor = true
-                            }) {
-                                Image(systemName: "pencil")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.appPurple)
-                                    .padding(8)
-                                    .background(Color.appPurple.opacity(0.1))
-                                    .clipShape(Circle())
-                            }
-                        }
-                        .padding(.horizontal, 20)
+            ZStack {
+                // White background matching Figma design
+                Color.primaryBackground.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Budget Summary Card
+                        BudgetSummaryCard(budget: budget)
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.top, Spacing.xxl)
                         
-                        if expenses.isEmpty {
-                            EmptyExpensesView()
-                                .padding(.horizontal, 20)
-                        } else {
-                            ForEach(expenses.prefix(5)) { expense in
-                                ExpenseRow(expense: expense)
-                                    .padding(.horizontal, 20)
+                        // Weekly Spending Chart
+                        WeeklySpendingChart(budget: budget, expenses: expenses)
+                            .padding(.horizontal, Spacing.md)
+                        
+                        // Recent Expenses
+                        VStack(alignment: .leading, spacing: Spacing.md) {
+                            HStack {
+                                SectionHeader(title: "Recent Expenses")
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    HapticFeedback.selection()
+                                    showBudgetEditor = true
+                                }) {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.primaryAccent)
+                                        .padding(Spacing.sm)
+                                        .background(Color.primaryAccent.opacity(0.1))
+                                        .clipShape(Circle())
+                                }
+                            }
+                            .padding(.horizontal, Spacing.md)
+                            
+                            if expenses.isEmpty {
+                                EmptyExpensesView()
+                                    .padding(.horizontal, Spacing.md)
+                            } else {
+                                ForEach(expenses.prefix(5)) { expense in
+                                    ExpenseRow(expense: expense)
+                                        .padding(.horizontal, Spacing.md)
+                                }
                             }
                         }
+                        .padding(.top, Spacing.sm)
+                        
+                        // Budget Tips
+                        BudgetTipsCard()
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.bottom, Spacing.xl)
                     }
-                    .padding(.top, 10)
-                    
-                    // Budget Tips
-                    BudgetTipsCard()
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
                 }
             }
             .navigationTitle("Budget Tracker")
@@ -73,109 +78,97 @@ struct BudgetView: View {
     }
 }
 
+// MARK: - Budget Summary Card (DesignSystem aligned)
 struct BudgetSummaryCard: View {
     let budget: Budget
     
+    // MARK: - Budget Summary Card (Design System: label=16pt medium, h1=24pt medium, card padding=16, cornerRadius=lg=10)
     var body: some View {
-        VStack(spacing: 15) {
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Weekly Budget")
-                        .font(.system(size: 16, weight: .semibold))
+        PrimaryCard { // Card.padding=16, Card.cornerRadius=lg=10
+            VStack(spacing: Spacing.md) {
+                HStack {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text("Weekly Budget")
+                            .font(.label) // 16pt, medium
+                            .foregroundColor(.textSecondary)
+                        
+                        Text("$\(String(format: "%.2f", budget.weeklyBudget))")
+                            .font(.h1) // 24pt, medium
+                            .foregroundColor(.textPrimary)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: Spacing.xs) {
+                        Text("Remaining")
+                            .font(.label) // 16pt, medium
+                            .foregroundColor(.textSecondary)
+                        
+                        Text("$\(String(format: "%.2f", budget.remaining))")
+                            .font(.h1) // 24pt, medium
+                            .foregroundColor(budget.remaining > 0 ? .success : .error)
+                    }
+                }
+                
+                // Progress bar - using DesignSystem ProgressBar
+                ProgressBar(
+                    value: budget.currentWeekSpending,
+                    maxValue: budget.weeklyBudget,
+                    color: budget.percentageUsed < 80 ? .success : .calorieColor,
+                    height: 8
+                )
+                
+                HStack {
+                    Text("Spent: $\(String(format: "%.2f", budget.currentWeekSpending))")
+                        .font(.bodySmall)
                         .foregroundColor(.textSecondary)
                     
-                    Text("$\(String(format: "%.2f", budget.weeklyBudget))")
-                        .font(.system(size: 32, weight: .bold))
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 8) {
-                    Text("Remaining")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.textSecondary)
+                    Spacer()
                     
-                    Text("$\(String(format: "%.2f", budget.remaining))")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(budget.remaining > 0 ? .green : .red)
+                    Text("\(Int(budget.percentageUsed))% used")
+                        .font(.label)
+                        .foregroundColor(budget.percentageUsed < 80 ? .success : .calorieColor)
                 }
-            }
-            
-            // Progress bar
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 12)
-                    
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(
-                            LinearGradient(
-                                colors: budget.percentageUsed < 80 ? [.green, .blue] : [.orange, .red],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: geometry.size.width * (budget.percentageUsed / 100), height: 12)
-                }
-            }
-            .frame(height: 12)
-            
-            HStack {
-                Text("Spent: $\(String(format: "%.2f", budget.currentWeekSpending))")
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSecondary)
-                
-                Spacer()
-                
-                Text("\(Int(budget.percentageUsed))% used")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(budget.percentageUsed < 80 ? .green : .orange)
             }
         }
-        .padding(20)
-        .background(Color.cardBackground)
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
 }
 
+// MARK: - Weekly Spending Chart (DesignSystem aligned)
 struct WeeklySpendingChart: View {
     let budget: Budget
     let expenses: [MealExpense]
     
+    // MARK: - Weekly Spending Chart (Design System: card padding=16, cornerRadius=lg=10, cornerRadius=sm=6)
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text("This Week's Spending")
-                .font(.system(size: 20, weight: .bold))
-                .padding(.horizontal, 20)
-            
-            // Simple bar chart for each day
-            HStack(alignment: .bottom, spacing: 8) {
-                ForEach(0..<7) { dayIndex in
-                    let dayExpenses = expenses.filter { Calendar.current.component(.weekday, from: $0.date) == dayIndex + 1 }
-                    let dayTotal = dayExpenses.reduce(0) { $0 + $1.cost }
-                    let maxSpending = expenses.map { $0.cost }.max() ?? 1
-                    
-                    VStack(spacing: 4) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.appPurple.opacity(0.6))
-                            .frame(width: 40, height: max(20, CGFloat(dayTotal / maxSpending) * 100))
+        PrimaryCard { // Card.padding=16, Card.cornerRadius=lg=10
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                SectionHeader(title: "This Week's Spending")
+                
+                // Simple bar chart for each day
+                HStack(alignment: .bottom, spacing: Spacing.sm) {
+                    ForEach(0..<7) { dayIndex in
+                        let dayExpenses = expenses.filter { Calendar.current.component(.weekday, from: $0.date) == dayIndex + 1 }
+                        let dayTotal = dayExpenses.reduce(0) { $0 + $1.cost }
+                        let maxSpending = expenses.map { $0.cost }.max() ?? 1
                         
-                        Text(dayName(for: dayIndex))
-                            .font(.system(size: 10))
-                            .foregroundColor(.textSecondary)
-                        
-                        Text("$\(String(format: "%.0f", dayTotal))")
-                            .font(.system(size: 10, weight: .semibold))
+                        VStack(spacing: Spacing.xs) {
+                            RoundedRectangle(cornerRadius: Radius.sm) // Small cornerRadius = 6
+                                .fill(Color.primaryAccent.opacity(0.6))
+                                .frame(width: 40, height: max(20, CGFloat(dayTotal / maxSpending) * 100))
+                            
+                            Text(dayName(for: dayIndex))
+                                .font(.labelSmall)
+                                .foregroundColor(.textSecondary)
+                            
+                            Text("$\(String(format: "%.0f", dayTotal))")
+                                .font(.labelSmall)
+                                .foregroundColor(.textPrimary)
+                        }
                     }
                 }
             }
-            .padding(.horizontal, 20)
         }
-        .padding(.vertical, 20)
-        .background(Color.cardBackground)
-        .cornerRadius(15)
     }
     
     private func dayName(for index: Int) -> String {
@@ -186,46 +179,47 @@ struct WeeklySpendingChart: View {
     }
 }
 
+// MARK: - Expense Row (DesignSystem aligned)
 struct ExpenseRow: View {
     let expense: MealExpense
     
     var body: some View {
-        HStack(spacing: 15) {
-            // Icon
-            ZStack {
-                Circle()
-                    .fill(expenseTypeColor(expense.type).opacity(0.2))
-                    .frame(width: 50, height: 50)
+        PrimaryCard {
+            HStack(spacing: Spacing.md) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(expenseTypeColor(expense.type).opacity(0.1))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: expenseTypeIcon(expense.type))
+                        .font(.system(size: 24))
+                        .foregroundColor(expenseTypeColor(expense.type))
+                }
                 
-                Image(systemName: expenseTypeIcon(expense.type))
-                    .font(.system(size: 24))
-                    .foregroundColor(expenseTypeColor(expense.type))
+                // Details
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(expense.name)
+                        .font(.h3) // 18pt, medium
+                        .foregroundColor(.textPrimary)
+                    
+                    Text(expense.type.rawValue)
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                    
+                    Text(expense.date, style: .date)
+                        .font(.labelSmall)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+                
+                // Cost
+                Text("$\(String(format: "%.2f", expense.cost))")
+                    .font(.h3) // 18pt, medium
+                    .foregroundColor(.primaryAccent)
             }
-            
-            // Details
-            VStack(alignment: .leading, spacing: 4) {
-                Text(expense.name)
-                    .font(.system(size: 16, weight: .semibold))
-                
-                Text(expense.type.rawValue)
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSecondary)
-                
-                Text(expense.date, style: .date)
-                    .font(.system(size: 12))
-                    .foregroundColor(.textSecondary)
-            }
-            
-            Spacer()
-            
-            // Cost
-            Text("$\(String(format: "%.2f", expense.cost))")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.appPurple)
         }
-        .padding(15)
-        .background(Color.cardBackground)
-        .cornerRadius(12)
     }
     
     private func expenseTypeColor(_ type: ExpenseType) -> Color {
@@ -247,73 +241,70 @@ struct ExpenseRow: View {
     }
 }
 
+// MARK: - Empty Expenses View (DesignSystem aligned)
 struct EmptyExpensesView: View {
+    // MARK: - Empty Expenses View (Design System: h3=18pt medium, card padding=16, cornerRadius=lg=10)
     var body: some View {
-        VStack(spacing: 15) {
-            Image(systemName: "chart.bar.doc.horizontal")
-                .font(.system(size: 50))
-                .foregroundColor(.gray.opacity(0.5))
-            
-            Text("No expenses yet")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.textSecondary)
-            
-            Text("Start tracking your meal spending to see it here")
-                .font(.system(size: 14))
-                .foregroundColor(.textSecondary)
-                .multilineTextAlignment(.center)
+        PrimaryCard { // Card.padding=16, Card.cornerRadius=lg=10
+            VStack(spacing: Spacing.md) {
+                Image(systemName: "chart.bar.doc.horizontal")
+                    .font(.system(size: 50))
+                    .foregroundColor(.textTertiary)
+                
+                Text("No expenses yet")
+                    .font(.h3) // 18pt, medium
+                    .foregroundColor(.textPrimary)
+                
+                Text("Start tracking your meal spending to see it here")
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(Spacing.xl)
         }
-        .padding(40)
-        .frame(maxWidth: .infinity)
-        .background(Color.gray.opacity(0.05))
-        .cornerRadius(15)
     }
 }
 
+// MARK: - Budget Tips Card (DesignSystem aligned - using solid color background)
 struct BudgetTipsCard: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text("💰")
-                    .font(.system(size: 24))
-                Text("Budget Tips")
-                    .font(.system(size: 20, weight: .bold))
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-                TipRow(icon: "lightbulb.fill", text: "Meal prep on weekends saves money")
-                TipRow(icon: "cart.fill", text: "Buy ingredients in bulk for recipes")
-                TipRow(icon: "star.fill", text: "Look for budget-friendly restaurants")
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(spacing: Spacing.sm) {
+                    Text("💰")
+                        .font(.system(size: 24))
+                    SectionHeader(title: "Budget Tips")
+                }
+                
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    TipRow(icon: "lightbulb.fill", text: "Meal prep on weekends saves money")
+                    TipRow(icon: "cart.fill", text: "Buy ingredients in bulk for recipes")
+                    TipRow(icon: "star.fill", text: "Look for budget-friendly restaurants")
+                }
             }
         }
-        .padding(20)
-        .background(
-            LinearGradient(
-                colors: [Color.appOrange.opacity(0.1), Color.yellow.opacity(0.1)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(15)
     }
 }
 
+// MARK: - Tip Row (DesignSystem aligned)
 struct TipRow: View {
     let icon: String
     let text: String
     
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
                 .font(.system(size: 14))
-                .foregroundColor(.appOrange)
+                .foregroundColor(.warning)
             
             Text(text)
-                .font(.system(size: 14))
+                .font(.bodySmall)
+                .foregroundColor(.textPrimary)
         }
     }
 }
 
+// MARK: - Budget Editor View (DesignSystem aligned)
 struct BudgetEditorView: View {
     @Binding var budget: Budget
     @Environment(\.dismiss) var dismiss
@@ -321,71 +312,76 @@ struct BudgetEditorView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 30) {
-                VStack(spacing: 15) {
-                    Text("Set Weekly Budget")
-                        .font(.system(size: 28, weight: .bold))
-                    
-                    Text("How much do you want to spend on meals this week?")
-                        .font(.system(size: 16))
-                        .foregroundColor(.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                .padding(.top, 40)
+            ZStack {
+                // White background matching Figma design
+                Color.background.ignoresSafeArea() // Design System: background = #ffffff
                 
-                // Budget input
-                VStack(spacing: 10) {
-                    HStack {
-                        Text("$")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(.appPurple)
+                VStack(spacing: Spacing.xl) {
+                    VStack(spacing: Spacing.md) {
+                        Text("Set Weekly Budget")
+                            .font(.h1) // 24pt, medium
+                            .foregroundColor(.textPrimary)
                         
-                        TextField("", value: $newBudget, format: .number)
-                            .font(.system(size: 48, weight: .bold))
-                            .keyboardType(.decimalPad)
+                        Text("How much do you want to spend on meals this week?")
+                            .font(.input) // 16pt, regular
+                            .foregroundColor(.textSecondary)
                             .multilineTextAlignment(.center)
+                            .padding(.horizontal, Spacing.xl)
                     }
-                    .padding()
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(15)
-                    .padding(.horizontal, 40)
+                    .padding(.top, Spacing.xxl)
                     
-                    // Quick presets
-                    HStack(spacing: 15) {
-                        BudgetPresetButton(amount: 50, current: $newBudget)
-                        BudgetPresetButton(amount: 100, current: $newBudget)
-                        BudgetPresetButton(amount: 150, current: $newBudget)
-                        BudgetPresetButton(amount: 200, current: $newBudget)
+                    // Budget input
+                    VStack(spacing: Spacing.sm) {
+                        HStack {
+                            Text("$")
+                                .font(.h1) // 24pt, medium
+                                .foregroundColor(.primaryAccent)
+                            
+                            TextField("", value: $newBudget, format: .number)
+                                .font(.system(size: 48, weight: .bold))
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.center)
+                                .foregroundColor(.textPrimary)
+                        }
+                        .padding(Spacing.md)
+                        .background(Color.inputBackground) // #f3f3f5
+                        .cornerRadius(Radius.md) // Button cornerRadius = 8
+                        .padding(.horizontal, Spacing.xl)
+                        
+                        // Quick presets
+                        HStack(spacing: Spacing.md) {
+                            BudgetPresetButton(amount: 50, current: $newBudget)
+                            BudgetPresetButton(amount: 100, current: $newBudget)
+                            BudgetPresetButton(amount: 150, current: $newBudget)
+                            BudgetPresetButton(amount: 200, current: $newBudget)
+                        }
+                        .padding(.horizontal, Spacing.xl)
                     }
-                    .padding(.horizontal, 40)
+                    
+                    Spacer()
+                    
+                    // Save button - using DesignSystem
+                    PrimaryButton(
+                        title: "Save Budget",
+                        action: {
+                            HapticFeedback.success()
+                            budget.weeklyBudget = newBudget
+                            dismiss()
+                        }
+                    )
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.xl)
                 }
-                
-                Spacer()
-                
-                // Save button
-                Button(action: {
-                    budget.weeklyBudget = newBudget
-                    dismiss()
-                }) {
-                    Text("Save Budget")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.appPurple)
-                        .cornerRadius(15)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
             }
             .navigationTitle("Edit Budget")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
+                        HapticFeedback.selection()
                         dismiss()
                     }
+                    .foregroundColor(.primaryAccent)
                 }
             }
             .onAppear {
@@ -395,21 +391,27 @@ struct BudgetEditorView: View {
     }
 }
 
+// MARK: - Budget Preset Button (DesignSystem aligned)
 struct BudgetPresetButton: View {
     let amount: Double
     @Binding var current: Double
     
     var body: some View {
         Button(action: {
+            HapticFeedback.selection()
             current = amount
         }) {
             Text("$\(Int(amount))")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(current == amount ? .white : .appPurple)
+                .font(.label) // 16pt, medium
+                .foregroundColor(current == amount ? .white : .primaryAccent)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(current == amount ? Color.appPurple : Color.appPurple.opacity(0.1))
-                .cornerRadius(10)
+                .padding(12) // Button.padding = 12
+                .background(current == amount ? Color.primaryAccent : Color.primaryAccent.opacity(0.1))
+                .cornerRadius(Radius.md) // Button cornerRadius = 8
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.md) // Button cornerRadius = 8
+                        .stroke(Color.primaryAccent, lineWidth: 1)
+                )
         }
     }
 }
