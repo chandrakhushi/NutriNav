@@ -26,6 +26,15 @@ A SwiftUI iOS app for tracking nutrition, discovering recipes, finding nearby he
 - **Nearby**: Restaurant listings with filters and nutrition info
 - **Profile**: User info, progress tracking, goals management
 
+## 📖 Navigation Guide
+
+**👉 See [SCREEN_NAVIGATION.md](./SCREEN_NAVIGATION.md) for a complete guide to:**
+- All screens and their file locations
+- Components used in each screen
+- Design system elements per screen
+- Quick reference for making changes
+- Screen-by-screen consistency checklist
+
 ## Project Structure
 
 ```
@@ -37,6 +46,11 @@ NutriNav/
 │   ├── Restaurant.swift         # Restaurant data model
 │   └── Activity.swift           # Activity and hobby tracking
 ├── Views/
+│   ├── Auth/
+│   │   └── LoginView.swift      # Login/Sign Up screen
+│   ├── Components/
+│   │   ├── DesignSystemComponents.swift  # Reusable UI components
+│   │   └── HealthKitComponents.swift     # HealthKit components
 │   ├── Onboarding/
 │   │   ├── OnboardingWelcomeView.swift
 │   │   ├── OnboardingPersonalInfoView.swift
@@ -44,17 +58,21 @@ NutriNav/
 │   │   ├── OnboardingActivityView.swift
 │   │   └── OnboardingGoalView.swift
 │   └── Main/
-│       ├── MainTabView.swift
-│       ├── HomeView.swift
-│       ├── RecipesView.swift
-│       ├── NearbyView.swift
-│       └── ProfileView.swift
+│       ├── MainTabView.swift    # Tab bar navigation
+│       ├── HomeView.swift       # Dashboard
+│       ├── RecipesView.swift    # Recipe browser
+│       ├── NearbyView.swift     # Restaurant finder
+│       ├── ProfileView.swift    # User profile & settings
+│       ├── ActivitiesView.swift # Hobbies & activities
+│       ├── CycleView.swift      # Cycle-aware nutrition
+│       └── BudgetView.swift     # Budget tracker
 ├── ViewModels/
 │   └── AppState.swift           # Global app state management
 ├── Services/
 │   └── MockDataService.swift   # Mock data for MVP development
 ├── Utilities/
-│   └── ColorExtensions.swift    # Custom color scheme
+│   ├── DesignSystem.swift       # Design system (colors, fonts, spacing)
+│   └── ColorExtensions.swift   # Legacy color extensions
 ├── ContentView.swift            # Root view
 └── NutriNavApp.swift           # App entry point
 ```
@@ -134,20 +152,36 @@ Replace with real API calls when ready.
 
 ## Design System
 
+**👉 See [SCREEN_NAVIGATION.md](./SCREEN_NAVIGATION.md) for complete design system documentation.**
+
 ### Colors
-- **Primary Purple**: `Color.appPurple`
-- **Primary Pink**: `Color.appPink`
-- **Primary Orange**: `Color.appOrange`
+- **Background**: `Color.background` - #ffffff
+- **Primary**: `Color.primary` - #030213
+- **Primary Accent**: `Color.primaryAccent` - #4CAF50 (green)
+- **Input Background**: `Color.inputBackground` - #f3f3f5
 - **Nutrition Colors**: 
-  - Calories: Orange
-  - Protein: Purple/Blue
-  - Carbs: Green
-  - Fats: Yellow
+  - Calories: Orange (`Color.calorieColor`)
+  - Protein: Blue (`Color.proteinColor`)
+  - Carbs: Green (`Color.carbColor`)
+  - Fats: Yellow (`Color.fatColor`)
 
 ### Typography
-- Headers: Bold, 24-32pt
-- Body: Regular, 14-18pt
-- Captions: Regular, 12-14pt
+- **h1**: 24pt, medium weight
+- **h2**: 20pt, medium weight
+- **h3**: 18pt, medium weight
+- **h4**: 16pt, medium weight
+- **label**: 16pt, medium weight
+- **button**: 16pt, medium weight
+- **input**: 16pt, regular weight
+
+### Spacing & Radius
+- **Card Padding**: 16px
+- **Button Padding**: 12px
+- **Card Corner Radius**: 10px (lg)
+- **Button Corner Radius**: 8px (md)
+- **Badge Corner Radius**: 6px (sm)
+
+All design system values are defined in `Utilities/DesignSystem.swift`.
 
 ## Next Steps for Production
 

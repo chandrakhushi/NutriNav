@@ -46,6 +46,7 @@ struct FoodEntry: Identifiable, Codable {
     var servingSize: String?
     var quantity: Double
     var timestamp: Date
+    var mealType: MealType?
     var confirmedByUser: Bool // User confirmed AI-detected food
     var barcode: String? // If scanned
     var restaurantId: UUID? // If from restaurant
@@ -62,6 +63,7 @@ struct FoodEntry: Identifiable, Codable {
         servingSize: String? = nil,
         quantity: Double = 1.0,
         timestamp: Date = Date(),
+        mealType: MealType? = nil,
         confirmedByUser: Bool = true,
         barcode: String? = nil,
         restaurantId: UUID? = nil,
@@ -77,11 +79,19 @@ struct FoodEntry: Identifiable, Codable {
         self.servingSize = servingSize
         self.quantity = quantity
         self.timestamp = timestamp
+        self.mealType = mealType
         self.confirmedByUser = confirmedByUser
         self.barcode = barcode
         self.restaurantId = restaurantId
         self.photoId = photoId
     }
+}
+
+enum MealType: String, Codable, CaseIterable, Hashable {
+    case breakfast = "Breakfast"
+    case lunch = "Lunch"
+    case dinner = "Dinner"
+    case snacks = "Snacks"
 }
 
 enum FoodSource: String, Codable {

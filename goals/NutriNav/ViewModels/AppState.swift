@@ -261,12 +261,37 @@ class AppState: ObservableObject {
         updateNutritionFromFoodLogs()
     }
     
+    /// Remove food entry from log
+    func removeFoodEntry(_ entry: FoodEntry) {
+        let today = Calendar.current.startOfDay(for: Date())
+        
+        // Find today's log
+        if let logIndex = foodLogs.firstIndex(where: { Calendar.current.isDate($0.date, inSameDayAs: today) }) {
+            // Remove the entry
+            foodLogs[logIndex].entries.removeAll { $0.id == entry.id }
+            
+            // If no entries left, remove the log
+            if foodLogs[logIndex].entries.isEmpty {
+                foodLogs.remove(at: logIndex)
+            }
+            
+            // Update nutrition totals
+            updateNutritionFromFoodLogs()
+        }
+    }
+    
     /// Update nutrition values from food logs
-    private func updateNutritionFromFoodLogs() {
+    /// Note: Calories consumed come from food logs only
+    /// Active calories from workouts (HealthKit) are tracked separately in todayActiveCalories
+    /// The base calorie target remains FIXED and does not change based on workouts
+    func updateNutritionFromFoodLogs() {
         let today = Calendar.current.startOfDay(for: Date())
         let todayLog = foodLogs.first { Calendar.current.isDate($0.date, inSameDayAs: today) }
         
+        // Calories consumed from food logging only
         dailyNutrition.calories.current = todayLog?.totalCalories ?? 0
+        
+        // Macros come from food logging only (not from workouts)
         dailyNutrition.protein.current = todayLog?.totalProtein ?? 0
         dailyNutrition.carbs.current = todayLog?.totalCarbs ?? 0
         dailyNutrition.fats.current = todayLog?.totalFats ?? 0
@@ -275,6 +300,12 @@ class AppState: ObservableObject {
         let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
         let weekLogs = foodLogs.filter { $0.date >= weekStart }
         dailyNutrition.consumedThisWeek = weekLogs.reduce(0) { $0 + $1.totalCalories }
+    }
+    
+    /// Calculate net calories (consumed - burned)
+    /// Used for insights only, does not affect the base calorie target
+    var netCalories: Double {
+        return dailyNutrition.calories.current - todayActiveCalories
     }
 }
 
