@@ -6,8 +6,9 @@
 //
 
 import Foundation
+import CoreLocation
 
-struct Restaurant: Identifiable, Codable {
+struct Restaurant: Identifiable, Codable, Equatable {
     var id: UUID
     var name: String
     var cuisine: [String]
@@ -17,12 +18,21 @@ struct Restaurant: Identifiable, Codable {
     var distance: Double // in miles
     var averageCalories: Int
     var averageProtein: Int // in grams
-    var imageName: String
+    var imageName: String // For mock data
+    var imageURL: String? // Optional image URL (provider-agnostic)
     var address: String
     var phoneNumber: String?
     var orderLink: String? // DoorDash/UberEats link
+    var latitude: Double? // For map view
+    var longitude: Double? // For map view
     
-    init(id: UUID = UUID(), name: String, cuisine: [String], isOpen: Bool, rating: Double, priceRange: PriceRange, distance: Double, averageCalories: Int, averageProtein: Int, imageName: String, address: String, phoneNumber: String? = nil, orderLink: String? = nil) {
+    // Computed property for location coordinate
+    var coordinate: CLLocationCoordinate2D? {
+        guard let lat = latitude, let lon = longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+    
+    init(id: UUID = UUID(), name: String, cuisine: [String], isOpen: Bool, rating: Double, priceRange: PriceRange, distance: Double, averageCalories: Int, averageProtein: Int, imageName: String, address: String, phoneNumber: String? = nil, orderLink: String? = nil, imageURL: String? = nil, latitude: Double? = nil, longitude: Double? = nil) {
         self.id = id
         self.name = name
         self.cuisine = cuisine
@@ -36,6 +46,9 @@ struct Restaurant: Identifiable, Codable {
         self.address = address
         self.phoneNumber = phoneNumber
         self.orderLink = orderLink
+        self.imageURL = imageURL
+        self.latitude = latitude
+        self.longitude = longitude
     }
 }
 
