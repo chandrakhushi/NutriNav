@@ -13,6 +13,7 @@ enum HomeRoute: Hashable {
     case checkin
     case bodySignals
     case mealDetails(mealType: MealType)
+    case logRecipe(mealType: MealType)
 }
 
 struct HomeView: View {
@@ -71,6 +72,9 @@ struct HomeView: View {
                         .environmentObject(appState)
                 case .mealDetails(let mealType):
                     MealDetailsView(mealType: mealType)
+                        .environmentObject(appState)
+                case .logRecipe(let mealType):
+                    LogRecipeFromMealView(initialMealType: mealType)
                         .environmentObject(appState)
                 }
             }
@@ -878,6 +882,18 @@ struct NutritionDetailsView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Log Recipe From Meal View
+struct LogRecipeFromMealView: View {
+    @EnvironmentObject var appState: AppState
+    let initialMealType: MealType
+    
+    var body: some View {
+        RecipesView(initialMealType: initialMealType)
+            .environmentObject(appState)
+            .navigationTitle("Find Recipe")
     }
 }
 

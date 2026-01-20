@@ -22,6 +22,10 @@ struct LogFoodView: View {
     @State private var searchError: String? = nil
     @State private var searchTask: Task<Void, Never>? = nil
     
+    // Common foods from API (cached)
+    @State private var commonFoods: [FoodSearchResult] = []
+    @State private var isLoadingCommonFoods: Bool = false
+    
     private let foodService = FoodService.shared
     
     struct FoodDetailsItem: Identifiable {
@@ -39,20 +43,89 @@ struct LogFoodView: View {
         _selectedMealType = State(initialValue: initialMealType ?? .breakfast)
     }
     
-    // Quick add foods (2x2 grid)
-    private let quickAddFoods: [(name: String, calories: Double, protein: Double)] = [
-        (name: "Apple", calories: 95, protein: 0.5),
-        (name: "Egg", calories: 70, protein: 6),
-        (name: "Protein Shake", calories: 120, protein: 25),
-        (name: "Chicken Breast", calories: 165, protein: 31)
-    ]
+    // Get most frequently logged foods for Quick Add (last 30 days)
+    // Falls back to common foods if user hasn't logged anything yet
+    private var quickAddFoods: [FoodEntry] {
+        let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+        
+        // Get all entries from last 30 days
+        let recentEntries = appState.foodLogs
+            .filter { $0.date >= thirtyDaysAgo }
+            .flatMap { $0.entries }
+        
+        // If user has logged foods, use their most frequent
+        if !recentEntries.isEmpty {
+            // Count frequency of each food name
+            var foodCounts: [String: (entry: FoodEntry, count: Int)] = [:]
+            
+            for entry in recentEntries {
+                if let existing = foodCounts[entry.name] {
+                    foodCounts[entry.name] = (entry: existing.entry, count: existing.count + 1)
+                } else {
+                    foodCounts[entry.name] = (entry: entry, count: 1)
+                }
+            }
+            
+            // Sort by frequency and take top 4
+            return foodCounts
+                .sorted { $0.value.count > $1.value.count }
+                .prefix(4)
+                .map { $0.value.entry }
+        } else {
+            // Fallback: Convert common foods from API to FoodEntry
+            return commonFoods.map { result in
+                FoodEntry(
+                    name: result.displayName,
+                    source: .manual,
+                    calories: result.caloriesPerServing,
+                    protein: result.proteinPerServing,
+                    carbs: result.carbsPerServing,
+                    fats: result.fatPerServing,
+                    servingSize: result.servingSizeDescription
+                )
+            }
+        }
+    }
     
-    // Favorites (sample data)
-    private let favoriteFoods: [(name: String, calories: Double, protein: Double)] = [
-        (name: "Greek Yogurt", calories: 120, protein: 15),
-        (name: "Banana", calories: 105, protein: 1),
-        (name: "Almonds", calories: 160, protein: 6)
-    ]
+    // Get favorited foods (from user's explicitly marked favorites)
+    private var favoriteFoods: [FoodEntry] {
+        // Get all logged foods that are favorited
+        let allEntries = appState.foodLogs.flatMap { $0.entries }
+        
+        // Create a dictionary of unique foods by name (keep most recent entry)
+        var uniqueFoods: [String: FoodEntry] = [:]
+        for entry in allEntries.reversed() {
+            if uniqueFoods[entry.name] == nil {
+                uniqueFoods[entry.name] = entry
+            }
+        }
+        
+        // Filter to only favorited foods
+        let favoritedEntries = appState.favoriteFoodNames
+            .compactMap { uniqueFoods[$0] }
+            .sorted { $0.name < $1.name }
+        
+        // If no logged entries for favorites, create placeholder entries from common foods
+        if favoritedEntries.isEmpty && !appState.favoriteFoodNames.isEmpty {
+            return appState.favoriteFoodNames.compactMap { name in
+                // Try to find in common foods
+                if let commonFood = commonFoods.first(where: { $0.displayName == name }) {
+                    return FoodEntry(
+                        name: commonFood.displayName,
+                        source: .manual,
+                        calories: commonFood.caloriesPerServing,
+                        protein: commonFood.proteinPerServing,
+                        carbs: commonFood.carbsPerServing,
+                        fats: commonFood.fatPerServing,
+                        servingSize: commonFood.servingSizeDescription
+                    )
+                }
+                return nil
+            }
+        }
+        
+        return favoritedEntries
+    }
     
     // Get today's food entries for Recent section
     private var todaysEntries: [FoodEntry] {
@@ -80,13 +153,17 @@ struct LogFoodView: View {
                         logWithPhotoCard
                             .padding(.horizontal, Spacing.md)
                         
-                        // Quick Add Section
+                    // Quick Add Section (only show if user has logged foods)
+                    if !quickAddFoods.isEmpty {
                         quickAddSection
                             .padding(.horizontal, Spacing.md)
-                        
-                        // Favorites Section
+                    }
+                    
+                    // Favorites Section (only show if user has favorites)
+                    if !favoriteFoods.isEmpty {
                         favoritesSection
                             .padding(.horizontal, Spacing.md)
+                    }
                         
                         // Recent Section
                         if !todaysEntries.isEmpty {
@@ -101,6 +178,10 @@ struct LogFoodView: View {
             .scrollContentBackground(.hidden)
             .onChange(of: searchText) { oldValue, newValue in
                 performSearch(query: newValue)
+            }
+            .task {
+                // Load common foods when view appears
+                await loadCommonFoods()
             }
         }
         .navigationTitle("Log Food")
@@ -193,19 +274,19 @@ struct LogFoodView: View {
     
     // MARK: - Search Result Row
     private func searchResultRow(result: FoodSearchResult) -> some View {
-        Button(action: {
-            HapticFeedback.selection()
-            selectedFoodForDetails = FoodDetailsItem(
-                name: result.displayName,
-                calories: result.caloriesPerServing,
-                protein: result.proteinPerServing,
-                carbs: result.carbsPerServing,
-                fat: result.fatPerServing,
-                servingSize: result.servingSizeDescription
-            )
-        }) {
-            PrimaryCard {
-                HStack {
+        PrimaryCard {
+            HStack {
+                Button(action: {
+                    HapticFeedback.selection()
+                    selectedFoodForDetails = FoodDetailsItem(
+                        name: result.displayName,
+                        calories: result.caloriesPerServing,
+                        protein: result.proteinPerServing,
+                        carbs: result.carbsPerServing,
+                        fat: result.fatPerServing,
+                        servingSize: result.servingSizeDescription
+                    )
+                }) {
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text(result.displayName)
                             .font(.input)
@@ -229,16 +310,49 @@ struct LogFoodView: View {
                                 .foregroundColor(.textTertiary)
                         }
                     }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundColor(.textTertiary)
                 }
+                .buttonStyle(PlainButtonStyle())
+                
+                Spacer()
+                
+                // Favorite button
+                Button(action: {
+                    HapticFeedback.selection()
+                    appState.toggleFavorite(foodName: result.displayName)
+                }) {
+                    Image(systemName: appState.isFavorite(foodName: result.displayName) ? "star.fill" : "star")
+                        .font(.system(size: 18))
+                        .foregroundColor(appState.isFavorite(foodName: result.displayName) ? Color(hex: "FFC107") : .textTertiary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(.textTertiary)
             }
         }
-        .buttonStyle(PlainButtonStyle())
+    }
+    
+    // MARK: - Load Common Foods
+    private func loadCommonFoods() async {
+        guard commonFoods.isEmpty && !isLoadingCommonFoods else { return }
+        
+        isLoadingCommonFoods = true
+        
+        do {
+            let foods = try await foodService.getCommonFoods()
+            await MainActor.run {
+                self.commonFoods = foods
+                self.isLoadingCommonFoods = false
+            }
+        } catch {
+            print("Failed to load common foods: \(error)")
+            await MainActor.run {
+                self.isLoadingCommonFoods = false
+            }
+        }
     }
     
     // MARK: - Search Function
@@ -321,103 +435,181 @@ struct LogFoodView: View {
     
     // MARK: - Quick Add Section
     private var quickAddSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("Quick Add")
-                .font(.h3)
-                .foregroundColor(.textPrimary)
-            
-            // 2x2 Grid
-            VStack(spacing: Spacing.sm) {
-                HStack(spacing: Spacing.sm) {
-                    quickAddCard(food: quickAddFoods[0])
-                    quickAddCard(food: quickAddFoods[1])
-                }
-                HStack(spacing: Spacing.sm) {
-                    quickAddCard(food: quickAddFoods[2])
-                    quickAddCard(food: quickAddFoods[3])
+        Group {
+            if !quickAddFoods.isEmpty {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Text("Quick Add")
+                        .font(.h3)
+                        .foregroundColor(.textPrimary)
+                    
+                    // 2x2 Grid (or fewer if less than 4 items)
+                    VStack(spacing: Spacing.sm) {
+                        if quickAddFoods.count >= 2 {
+                            HStack(spacing: Spacing.sm) {
+                                quickAddCard(entry: quickAddFoods[0])
+                                if quickAddFoods.count > 1 {
+                                    quickAddCard(entry: quickAddFoods[1])
+                                }
+                            }
+                        }
+                        if quickAddFoods.count >= 4 {
+                            HStack(spacing: Spacing.sm) {
+                                quickAddCard(entry: quickAddFoods[2])
+                                quickAddCard(entry: quickAddFoods[3])
+                            }
+                        } else if quickAddFoods.count == 3 {
+                            HStack(spacing: Spacing.sm) {
+                                quickAddCard(entry: quickAddFoods[2])
+                                Spacer()
+                            }
+                        }
+                    }
                 }
             }
         }
     }
     
-    private func quickAddCard(food: (name: String, calories: Double, protein: Double)) -> some View {
-        Button(action: {
-            HapticFeedback.selection()
-            // Show food details instead of directly adding
-            selectedFoodForDetails = FoodDetailsItem(
-                name: food.name,
-                calories: food.calories,
-                protein: food.protein,
-                carbs: 0.0,
-                fat: 0.0,
-                servingSize: "1 serving"
-            )
-        }) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(food.name)
-                    .font(.input)
-                    .foregroundColor(.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
-                Text("\(Int(food.calories)) cal")
-                    .font(.bodySmall)
-                    .foregroundColor(.textSecondary)
+    private func quickAddCard(entry: FoodEntry) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Button(action: {
+                HapticFeedback.selection()
+                // Show food details instead of directly adding
+                let servingSize = entry.servingSize ?? "100 g"
+                selectedFoodForDetails = FoodDetailsItem(
+                    name: entry.name,
+                    calories: entry.calories,
+                    protein: entry.protein,
+                    carbs: entry.carbs,
+                    fat: entry.fats,
+                    servingSize: servingSize
+                )
+            }) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(entry.name)
+                        .font(.input)
+                        .foregroundColor(.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(2)
+                    
+                    Text("\(Int(entry.calories)) cal")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                }
+                .padding(Spacing.md)
+                .frame(maxWidth: .infinity, minHeight: 80)
+                .background(Color.inputBackground)
+                .cornerRadius(Radius.md)
+                .contentShape(Rectangle())
             }
-            .padding(Spacing.md)
-            .frame(maxWidth: .infinity, minHeight: 80)
-            .background(Color.inputBackground)
-            .cornerRadius(Radius.md)
-            .contentShape(Rectangle())
+            .buttonStyle(PlainButtonStyle())
+            
+            // Favorite button overlay
+            Button(action: {
+                HapticFeedback.selection()
+                appState.toggleFavorite(foodName: entry.name)
+            }) {
+                Image(systemName: appState.isFavorite(foodName: entry.name) ? "star.fill" : "star")
+                    .font(.system(size: 14))
+                    .foregroundColor(appState.isFavorite(foodName: entry.name) ? Color(hex: "FFC107") : .textTertiary)
+                    .padding(8)
+                    .background(Color.background.opacity(0.8))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(8)
         }
-        .buttonStyle(PlainButtonStyle())
     }
     
     // MARK: - Favorites Section
     private var favoritesSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(Color(hex: "FFC107"))
-                
-                Text("Favorites")
-                    .font(.h3)
-                    .foregroundColor(.textPrimary)
-            }
-            
-            VStack(spacing: Spacing.sm) {
-                ForEach(favoriteFoods, id: \.name) { food in
-                    favoriteRow(food: food)
+        Group {
+            if !favoriteFoods.isEmpty {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color(hex: "FFC107"))
+                        
+                        Text("Favorites")
+                            .font(.h3)
+                            .foregroundColor(.textPrimary)
+                    }
+                    
+                    VStack(spacing: Spacing.sm) {
+                        ForEach(Array(favoriteFoods.prefix(5)), id: \.id) { entry in
+                            favoriteRow(entry: entry)
+                        }
+                    }
                 }
             }
         }
     }
     
-    private func favoriteRow(food: (name: String, calories: Double, protein: Double)) -> some View {
+    private func favoriteRow(entry: FoodEntry) -> some View {
         PrimaryCard {
             HStack {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(food.name)
-                        .font(.input)
-                        .foregroundColor(.textPrimary)
-                    
-                    Text("\(Int(food.calories)) cal • \(Int(food.protein))g protein")
+                // Make the food info area tappable
+                Button(action: {
+                    HapticFeedback.selection()
+                    // Show food details
+                    let servingSize = entry.servingSize ?? "100 g"
+                    selectedFoodForDetails = FoodDetailsItem(
+                        name: entry.name,
+                        calories: entry.calories,
+                        protein: entry.protein,
+                        carbs: entry.carbs,
+                        fat: entry.fats,
+                        servingSize: servingSize
+                    )
+                }) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text(entry.name)
+                            .font(.input)
+                            .foregroundColor(.textPrimary)
+                        
+                        HStack(spacing: Spacing.xs) {
+                            Text("\(Int(entry.calories)) cal")
+                            if entry.protein > 0 {
+                                Text("• \(Int(entry.protein))g protein")
+                            }
+                            if let servingSize = entry.servingSize {
+                                Text("• \(servingSize)")
+                                    .font(.bodySmall)
+                                    .foregroundColor(.textTertiary)
+                            }
+                        }
                         .font(.bodySmall)
                         .foregroundColor(.textSecondary)
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
                 
                 Spacer()
+                
+                // Favorite button (already favorited, but can unfavorite)
+                Button(action: {
+                    HapticFeedback.selection()
+                    appState.toggleFavorite(foodName: entry.name)
+                }) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(Color(hex: "FFC107"))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
                 
                 Button(action: {
                     HapticFeedback.selection()
                     // Show food details instead of directly adding
+                    let servingSize = entry.servingSize ?? "100 g"
                     selectedFoodForDetails = FoodDetailsItem(
-                        name: food.name,
-                        calories: food.calories,
-                        protein: food.protein,
-                        carbs: 0.0,
-                        fat: 0.0,
-                        servingSize: "1 serving"
+                        name: entry.name,
+                        calories: entry.calories,
+                        protein: entry.protein,
+                        carbs: entry.carbs,
+                        fat: entry.fats,
+                        servingSize: servingSize
                     )
                 }) {
                     Image(systemName: "plus.circle.fill")
@@ -701,6 +893,17 @@ struct FoodDetailsView: View {
             .navigationTitle("Food Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        HapticFeedback.selection()
+                        appState.toggleFavorite(foodName: foodName.isEmpty ? initialFoodName : foodName)
+                    }) {
+                        Image(systemName: appState.isFavorite(foodName: foodName.isEmpty ? initialFoodName : foodName) ? "star.fill" : "star")
+                            .font(.system(size: 18))
+                            .foregroundColor(appState.isFavorite(foodName: foodName.isEmpty ? initialFoodName : foodName) ? Color(hex: "FFC107") : .textTertiary)
+                    }
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") {
                         HapticFeedback.impact()

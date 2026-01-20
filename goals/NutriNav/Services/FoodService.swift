@@ -91,6 +91,29 @@ class FoodService: FoodSearchService {
         return apiKey != nil && !apiKey!.isEmpty
     }
     
+    // MARK: - Get Common/Popular Foods
+    /// Fetch common foods for quick add (fallback when user hasn't logged anything)
+    func getCommonFoods() async throws -> [FoodSearchResult] {
+        // Search for common foods that most people eat
+        let commonFoodQueries = ["apple", "egg", "chicken breast", "banana"]
+        var allResults: [FoodSearchResult] = []
+        
+        // Fetch top result for each common food
+        for query in commonFoodQueries {
+            do {
+                let results = try await searchFoods(query: query)
+                if let firstResult = results.first {
+                    allResults.append(firstResult)
+                }
+            } catch {
+                // Continue if one fails
+                print("Failed to fetch \(query): \(error)")
+            }
+        }
+        
+        return allResults
+    }
+    
     // MARK: - Search Foods
     func searchFoods(query: String) async throws -> [FoodSearchResult] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {

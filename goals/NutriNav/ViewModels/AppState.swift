@@ -33,6 +33,9 @@ class AppState: ObservableObject {
     @Published var foodLogs: [FoodLog] = []
     @Published var weeklyFoodLog: FoodLog?
     
+    // Favorite foods (stored by food name for easy lookup)
+    @Published var favoriteFoodNames: Set<String> = []
+    
     // Body metrics (calculated)
     @Published var bodyMetrics: BodyMetrics?
     
@@ -119,6 +122,11 @@ class AppState: ObservableObject {
         self.hasCompletedOnboarding = false // Set to true to skip onboarding for testing
         self.hobbies = MockDataService.shared.getHobbies()
         self.expenses = MockDataService.shared.getExpenses()
+        
+        // Load favorites from UserDefaults
+        if let savedFavorites = UserDefaults.standard.array(forKey: "favoriteFoodNames") as? [String] {
+            self.favoriteFoodNames = Set(savedFavorites)
+        }
         
         // Set up HealthKit observers
         setupHealthKit()
@@ -306,6 +314,28 @@ class AppState: ObservableObject {
     /// Used for insights only, does not affect the base calorie target
     var netCalories: Double {
         return dailyNutrition.calories.current - todayActiveCalories
+    }
+    
+    // MARK: - Favorite Foods Management
+    
+    /// Toggle favorite status for a food
+    func toggleFavorite(foodName: String) {
+        if favoriteFoodNames.contains(foodName) {
+            favoriteFoodNames.remove(foodName)
+        } else {
+            favoriteFoodNames.insert(foodName)
+        }
+        saveFavorites()
+    }
+    
+    /// Check if a food is favorited
+    func isFavorite(foodName: String) -> Bool {
+        return favoriteFoodNames.contains(foodName)
+    }
+    
+    /// Save favorites to UserDefaults
+    private func saveFavorites() {
+        UserDefaults.standard.set(Array(favoriteFoodNames), forKey: "favoriteFoodNames")
     }
 }
 
