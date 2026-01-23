@@ -15,6 +15,7 @@ struct LogFoodView: View {
     @State private var searchText: String = ""
     @State private var showManualEntry = false
     @State private var selectedFoodForDetails: FoodDetailsItem? = nil
+    @State private var showPremium = false
     
     // Search state
     @State private var searchResults: [FoodSearchResult] = []
@@ -211,6 +212,10 @@ struct LogFoodView: View {
             )
             .environmentObject(appState)
         }
+        .sheet(isPresented: $showPremium) {
+            PremiumView()
+                .environmentObject(appState)
+        }
     }
     
     // MARK: - Search Bar
@@ -405,26 +410,50 @@ struct LogFoodView: View {
     
     // MARK: - Log with Photo Card
     private var logWithPhotoCard: some View {
-        Button(action: {
+        let isPremium = appState.subscriptionService.hasPremiumAccess()
+        
+        return Button(action: {
             HapticFeedback.selection()
-            // TODO: Implement photo logging
+            if isPremium {
+                // TODO: Implement photo logging
+            } else {
+                showPremium = true
+            }
         }) {
             HStack(spacing: Spacing.md) {
-                Image(systemName: "camera.fill")
+                Image(systemName: isPremium ? "camera.fill" : "lock.fill")
                     .font(.system(size: 24))
                     .foregroundColor(.white)
                 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Log with Photo")
-                        .font(.h3)
-                        .foregroundColor(.white)
+                    HStack(spacing: Spacing.xs) {
+                        Text("Log with Photo")
+                            .font(.h3)
+                            .foregroundColor(.white)
+                        
+                        if !isPremium {
+                            Text("Premium")
+                                .font(.labelSmall)
+                                .foregroundColor(Color(hex: "2196F3"))
+                                .padding(.horizontal, Spacing.xs)
+                                .padding(.vertical, 2)
+                                .background(Color.white)
+                                .cornerRadius(Radius.sm)
+                        }
+                    }
                     
-                    Text("Take a picture of your meal")
+                    Text(isPremium ? "Take a picture of your meal" : "Unlock photo logging with Premium")
                         .font(.bodySmall)
                         .foregroundColor(.white.opacity(0.9))
                 }
                 
                 Spacer()
+                
+                if !isPremium {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.8))
+                }
             }
             .padding(Spacing.md)
             .background(Color(hex: "2196F3")) // Blue

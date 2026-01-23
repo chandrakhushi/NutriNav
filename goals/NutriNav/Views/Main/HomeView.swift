@@ -243,20 +243,21 @@ struct HomeView: View {
     
     // MARK: - Calories Section (matching React design)
     private var caloriesSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack {
-                Text("Calories KCAL")
-                    .font(.bodySmall)
-                    .foregroundColor(.textSecondary)
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack {
+                    Text("Calories KCAL")
+                        .font(.bodySmall)
+                        .fontWeight(.bold)
+                        .foregroundColor(.textSecondary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color(hex: "D1D5DB")) // gray-300
+                }
                 
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 20))
-                    .foregroundColor(Color(hex: "D1D5DB")) // gray-300
-            }
-            
-            PrimaryCard {
                 VStack(spacing: Spacing.xl) {
                     // Semi-circular gauge
                     calorieGauge
@@ -281,10 +282,27 @@ struct HomeView: View {
                                 .foregroundColor(.textSecondary)
                         }
                     }
+                    
+                    // Active Calories
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(hex: "FF9800"))
+                        Text("Calories Burnt: \(Int(appState.todayActiveCalories)) cal")
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                    }
+                    .padding(.top, Spacing.xs)
                 }
             }
-            .cornerRadius(24) // rounded-3xl matching React
         }
+        .cornerRadius(24) // rounded-3xl matching React
+        .shadow(
+            color: Color.black.opacity(0.1),
+            radius: 8,
+            x: 0,
+            y: 4
+        )
     }
     
     // MARK: - Calorie Gauge (Speed dial style - matching React design)
@@ -323,64 +341,66 @@ struct HomeView: View {
     
     // MARK: - Macros Breakdown Section
     private var macrosBreakdownSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack {
-                HStack(spacing: Spacing.xs) {
-                    Circle()
-                        .fill(Color(hex: "14B8A6"))
-                        .frame(width: 8, height: 8)
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack {
                     Text("Macros Breakdown")
-                        .font(.h2) // 20pt, medium
-                        .foregroundColor(.textPrimary)
+                        .font(.bodySmall)
+                        .fontWeight(.bold)
+                        .foregroundColor(.textSecondary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color(hex: "D1D5DB")) // gray-300
                 }
                 
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14))
-                    .foregroundColor(.textSecondary)
-            }
-            
-            PrimaryCard {
                 HStack(spacing: Spacing.md) {
-                    // Macros vertical layout (compressed spacing)
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        macroRowVertical(
+                    // Macros horizontal layout (three columns side-by-side)
+                    HStack(spacing: Spacing.md) {
+                        macroColumn(
                             name: "Carbs",
                             value: appState.dailyNutrition.carbs.current,
                             target: appState.dailyNutrition.carbs.target,
                             color: Color(hex: "10B981") // Green
                         )
                         
-                        macroRowVertical(
+                        macroColumn(
                             name: "Protein",
                             value: appState.dailyNutrition.protein.current,
                             target: appState.dailyNutrition.protein.target,
                             color: Color(hex: "F97316") // Orange
                         )
                         
-                        macroRowVertical(
+                        macroColumn(
                             name: "Fat",
                             value: appState.dailyNutrition.fats.current,
                             target: appState.dailyNutrition.fats.target,
                             color: Color(hex: "3B82F6") // Blue
                         )
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity)
                     
                     // Three concentric rings (outer, middle, inner)
                     concentricMacroRings
-                        .frame(width: 128, height: 128)
+                        .frame(width: 90, height: 90)
                 }
             }
-            .cornerRadius(24) // rounded-3xl matching React
         }
+        .cornerRadius(24) // rounded-3xl matching React
+        .shadow(
+            color: Color.black.opacity(0.1),
+            radius: 8,
+            x: 0,
+            y: 4
+        )
     }
     
-    private func macroRowVertical(name: String, value: Double, target: Double, color: Color) -> some View {
+    private func macroColumn(name: String, value: Double, target: Double, color: Color) -> some View {
         let percentage = target > 0 ? Int((value / target) * 100) : 0
         
-        return VStack(alignment: .leading, spacing: 4) {
+        return VStack(alignment: .center, spacing: 4) {
             Text(name)
                 .font(.bodySmall)
                 .foregroundColor(.textSecondary)
@@ -391,6 +411,7 @@ struct HomeView: View {
                 .font(.bodySmall)
                 .foregroundColor(.textSecondary)
         }
+        .frame(maxWidth: .infinity)
     }
     
     private var concentricMacroRings: some View {
@@ -407,44 +428,44 @@ struct HomeView: View {
         let fatPercentage = fatTarget > 0 ? min(fat / fatTarget, 1.0) : 0
         
         return ZStack {
-            // Carbs ring (outer) - radius 58
+            // Carbs ring (outer) - scaled down proportionally
             Circle()
-                .stroke(Color(hex: "E5E7EB"), lineWidth: 8)
-                .frame(width: 116, height: 116)
+                .stroke(Color(hex: "E5E7EB"), lineWidth: 6)
+                .frame(width: 80, height: 80)
             Circle()
                 .trim(from: 0, to: carbsPercentage)
                 .stroke(
                     Color(hex: "10B981"),
-                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .frame(width: 116, height: 116)
+                .frame(width: 80, height: 80)
             
-            // Protein ring (middle) - radius 46
+            // Protein ring (middle) - scaled down proportionally
             Circle()
-                .stroke(Color(hex: "E5E7EB"), lineWidth: 8)
-                .frame(width: 92, height: 92)
+                .stroke(Color(hex: "E5E7EB"), lineWidth: 6)
+                .frame(width: 64, height: 64)
             Circle()
                 .trim(from: 0, to: proteinPercentage)
                 .stroke(
                     Color(hex: "F97316"),
-                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .frame(width: 92, height: 92)
+                .frame(width: 64, height: 64)
             
-            // Fat ring (inner) - radius 34
+            // Fat ring (inner) - scaled down proportionally
             Circle()
-                .stroke(Color(hex: "E5E7EB"), lineWidth: 8)
-                .frame(width: 68, height: 68)
+                .stroke(Color(hex: "E5E7EB"), lineWidth: 6)
+                .frame(width: 48, height: 48)
             Circle()
                 .trim(from: 0, to: fatPercentage)
                 .stroke(
                     Color(hex: "3B82F6"),
-                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .frame(width: 68, height: 68)
+                .frame(width: 48, height: 48)
         }
     }
     
@@ -502,6 +523,12 @@ struct HomeView: View {
             }
         }
         .cornerRadius(24) // rounded-3xl matching React
+        .shadow(
+            color: Color.black.opacity(0.1),
+            radius: 8,
+            x: 0,
+            y: 4
+        )
     }
     
     // MARK: - Today's Meals Section
@@ -522,6 +549,13 @@ struct HomeView: View {
                     mealRow(mealType: .snacks)
                 }
             }
+            .cornerRadius(24) // rounded-3xl matching React
+            .shadow(
+                color: Color.black.opacity(0.1),
+                radius: 8,
+                x: 0,
+                y: 4
+            )
         }
     }
     
@@ -639,10 +673,10 @@ struct HomeView: View {
             )
             .cornerRadius(Radius.lg)
             .shadow(
-                color: Shadow.button.color,
-                radius: Shadow.button.radius,
-                x: Shadow.button.x,
-                y: Shadow.button.y
+                color: Color.black.opacity(0.1),
+                radius: 8,
+                x: 0,
+                y: 4
             )
         }
         .buttonStyle(PlainButtonStyle())
