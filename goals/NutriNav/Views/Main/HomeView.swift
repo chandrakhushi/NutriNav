@@ -32,28 +32,24 @@ struct HomeView: View {
                         headerSection
                             .padding(.top, Spacing.xxl)
                         
-                        // Daily Summary Cards (Streak, Water, Steps)
-                        dailySummaryCards
+                        // Calories Section
+                        caloriesSection
                             .padding(.horizontal, Spacing.md)
                         
-                        // Calories & Macros Section
-                        caloriesAndMacrosSection
+                        // Macros Breakdown Section
+                        macrosBreakdownSection
+                            .padding(.horizontal, Spacing.md)
+                        
+                        // Steps and Water Section
+                        stepsAndWaterSection
                             .padding(.horizontal, Spacing.md)
                         
                         // Today's Meals Section
                         todaysMealsSection
                             .padding(.horizontal, Spacing.md)
                         
-                        // Log Food or Workout Button
+                        // Log Food Button
                         logFoodButton
-                            .padding(.horizontal, Spacing.md)
-                        
-                        // Weekly Progress Section
-                        weeklyProgressSection
-                            .padding(.horizontal, Spacing.md)
-                        
-                        // Today's Insight
-                        todaysInsightCard
                             .padding(.horizontal, Spacing.md)
                             .padding(.bottom, Spacing.xl)
                     }
@@ -85,36 +81,78 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Header Section (Design System: h1=24pt medium)
+    // MARK: - Header Section (matching React design)
     private var headerSection: some View {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(timeBasedGreeting)
-                .font(.h1) // 24pt, medium
-                        .foregroundColor(.textPrimary)
-                    
-            Text("Here's your day at a glance")
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Top row with date and actions
+            HStack {
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 16))
+                        .foregroundColor(.textSecondary)
+                    Text(formattedDateShort)
                         .font(.bodySmall)
                         .foregroundColor(.textSecondary)
+                }
+                
+                Spacer()
+                
+                // Streak and plus button
+                HStack(spacing: Spacing.md) {
+                    // Streak display (red background matching React)
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.red)
+                        Text("\(appState.currentStreak.currentDays)")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.red)
+                    }
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, 6)
+                    .background(Color(hex: "FEF2F2")) // red-50
+                    .cornerRadius(20)
+                    
+                    Button(action: {
+                        HapticFeedback.impact()
+                        navigationPath.append(HomeRoute.log(mealType: nil))
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Color.black)
+                            .clipShape(Circle())
+                    }
+                }
+            }
+            
+            // Log count
+            Text("\(todayLogCount) LOGS TODAY")
+                .font(.bodySmall)
+                .foregroundColor(.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.md)
         .padding(.bottom, Spacing.md)
     }
     
-    // MARK: - Time-Based Greeting
-    private var timeBasedGreeting: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 0..<12:
-            return "Good morning"
-        case 12..<17:
-            return "Good afternoon"
-        case 17..<22:
-            return "Good evening"
-        default:
-            return "Good night"
-        }
+    // MARK: - Formatted Date Short (matching React)
+    private var formattedDateShort: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "'Today,' d MMMM"
+        return formatter.string(from: Date())
     }
+    
+    
+    // MARK: - Today Log Count
+    private var todayLogCount: Int {
+        let today = Calendar.current.startOfDay(for: Date())
+        let todayLog = appState.foodLogs.first { Calendar.current.isDate($0.date, inSameDayAs: today) }
+        return todayLog?.entries.count ?? 0
+    }
+    
+    
     
     // MARK: - Protein Insight Text
     private var proteinInsightText: String {
@@ -203,126 +241,267 @@ struct HomeView: View {
         return "\(Int(steps))"
     }
     
-    // MARK: - Calories & Macros Section
-    private var caloriesAndMacrosSection: some View {
+    // MARK: - Calories Section (matching React design)
+    private var caloriesSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Text("Calories & Macros")
-                    .font(.h2) // 20pt, medium
-                    .foregroundColor(.textPrimary)
+                Text("Calories KCAL")
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
                 
                 Spacer()
                 
-                let remaining = max(0, appState.dailyNutrition.calories.target - appState.dailyNutrition.calories.current)
-                Text("\(Int(remaining)) cal left")
-                    .font(.bodySmall)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 20))
+                    .foregroundColor(Color(hex: "D1D5DB")) // gray-300
+            }
+            
+            PrimaryCard {
+                VStack(spacing: Spacing.xl) {
+                    // Semi-circular gauge
+                    calorieGauge
+                    
+                    // Legend (matching React - horizontal layout)
+                    HStack(spacing: Spacing.lg) {
+                        HStack(spacing: Spacing.xs) {
+                            Circle()
+                                .fill(Color(hex: "14B8A6")) // teal-500
+                                .frame(width: 8, height: 8)
+                            Text("Consumed \(Int(appState.dailyNutrition.calories.current))kcal")
+                                .font(.bodySmall)
+                                .foregroundColor(.textSecondary)
+                        }
+                        
+                        HStack(spacing: Spacing.xs) {
+                            Circle()
+                                .fill(Color(hex: "D1D5DB")) // gray-300
+                                .frame(width: 8, height: 8)
+                            Text("Base \(Int(appState.dailyNutrition.calories.target))kcal")
+                                .font(.bodySmall)
+                                .foregroundColor(.textSecondary)
+                        }
+                    }
+                }
+            }
+            .cornerRadius(24) // rounded-3xl matching React
+        }
+    }
+    
+    // MARK: - Calorie Gauge (Speed dial style - matching React design)
+    private var calorieGauge: some View {
+        let remaining = max(0, appState.dailyNutrition.calories.target - appState.dailyNutrition.calories.current)
+        let consumed = appState.dailyNutrition.calories.current
+        let base = appState.dailyNutrition.calories.target
+        let gaugePercentage = base > 0 ? (consumed / base) * 100 : 0
+        let gaugeAngle = min((gaugePercentage / 100) * 180, 180)
+        
+        return GeometryReader { geometry in
+            ZStack {
+                // SVG-style gauge with lines from -180 to 0 degrees
+                GaugeView(
+                    gaugeAngle: gaugeAngle,
+                    filledColor: Color(hex: "14B8A6"), // Teal
+                    emptyColor: Color(hex: "E5E7EB") // Light gray
+                )
+                .frame(height: 160)
+                
+                // Center text (positioned in the lower part of semi-circle)
+                VStack(spacing: 4) {
+                    Text("\(Int(remaining))")
+                        .font(.system(size: 48, weight: .bold))
+                        .foregroundColor(.textPrimary)
+                    Text("calories remaining")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                }
+                .position(x: geometry.size.width / 2, y: geometry.size.height * 0.75) // 75% down from top
+            }
+        }
+        .frame(height: 160)
+        .padding(.vertical, Spacing.md)
+    }
+    
+    // MARK: - Macros Breakdown Section
+    private var macrosBreakdownSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                HStack(spacing: Spacing.xs) {
+                    Circle()
+                        .fill(Color(hex: "14B8A6"))
+                        .frame(width: 8, height: 8)
+                    Text("Macros Breakdown")
+                        .font(.h2) // 20pt, medium
+                        .foregroundColor(.textPrimary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
                     .foregroundColor(.textSecondary)
             }
             
             PrimaryCard {
-                VStack(spacing: Spacing.lg) {
-                    // Large Calorie Progress Ring
-                    calorieProgressRing
+                HStack(spacing: Spacing.md) {
+                    // Macros vertical layout (compressed spacing)
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        macroRowVertical(
+                            name: "Carbs",
+                            value: appState.dailyNutrition.carbs.current,
+                            target: appState.dailyNutrition.carbs.target,
+                            color: Color(hex: "10B981") // Green
+                        )
+                        
+                        macroRowVertical(
+                            name: "Protein",
+                            value: appState.dailyNutrition.protein.current,
+                            target: appState.dailyNutrition.protein.target,
+                            color: Color(hex: "F97316") // Orange
+                        )
+                        
+                        macroRowVertical(
+                            name: "Fat",
+                            value: appState.dailyNutrition.fats.current,
+                            target: appState.dailyNutrition.fats.target,
+                            color: Color(hex: "3B82F6") // Blue
+                        )
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    // Three Macro Rings (Protein, Carbs, Fat)
-                    macroRingsRow
+                    // Three concentric rings (outer, middle, inner)
+                    concentricMacroRings
+                        .frame(width: 128, height: 128)
                 }
             }
+            .cornerRadius(24) // rounded-3xl matching React
         }
     }
     
-    private var calorieProgressRing: some View {
-        ZStack {
-            // Background ring
-            Circle()
-                .stroke(Color.textTertiary.opacity(0.2), lineWidth: 16)
-                .frame(width: 160, height: 160)
-            
-            // Progress ring
-            let percentage = appState.dailyNutrition.calories.target > 0 ? min(appState.dailyNutrition.calories.current / appState.dailyNutrition.calories.target, 1.0) : 0
-            Circle()
-                .trim(from: 0, to: percentage)
-                .stroke(
-                    Color.calorieColor,
-                    style: StrokeStyle(
-                        lineWidth: 16,
-                        lineCap: .round
-                    )
-                )
-                .rotationEffect(.degrees(-90))
-                .frame(width: 160, height: 160)
-            
-            // Center text
-            VStack(spacing: 2) {
-                Text("\(Int(appState.dailyNutrition.calories.current))")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.textPrimary)
-                Text("of \(Int(appState.dailyNutrition.calories.target)) cal")
-                    .font(.bodySmall)
-                    .foregroundColor(.textSecondary)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.md)
-    }
-    
-    private var macroRingsRow: some View {
-        HStack(spacing: Spacing.lg) {
-            macroRing(
-                value: appState.dailyNutrition.protein.current,
-                target: appState.dailyNutrition.protein.target,
-                label: "Protein",
-                color: .proteinColor
-            )
-            
-            macroRing(
-                value: appState.dailyNutrition.carbs.current,
-                target: appState.dailyNutrition.carbs.target,
-                label: "Carbs",
-                color: .carbColor
-            )
-            
-            macroRing(
-                value: appState.dailyNutrition.fats.current,
-                target: appState.dailyNutrition.fats.target,
-                label: "Fat",
-                color: .fatColor
-            )
-        }
-    }
-    
-    private func macroRing(value: Double, target: Double, label: String, color: Color) -> some View {
-        VStack(spacing: Spacing.xs) {
-            ZStack {
-                // Background ring
-                Circle()
-                    .stroke(Color.textTertiary.opacity(0.2), lineWidth: 8)
-                    .frame(width: 80, height: 80)
-                
-                // Progress ring
-                let percentage = target > 0 ? min(value / target, 1.0) : 0
-                Circle()
-                    .trim(from: 0, to: percentage)
-                    .stroke(
-                        color,
-                        style: StrokeStyle(
-                            lineWidth: 8,
-                            lineCap: .round
-                        )
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 80, height: 80)
-            }
-            
+    private func macroRowVertical(name: String, value: Double, target: Double, color: Color) -> some View {
+        let percentage = target > 0 ? Int((value / target) * 100) : 0
+        
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(name)
+                .font(.bodySmall)
+                .foregroundColor(.textSecondary)
             Text("\(Int(value))g")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.textPrimary)
-            
-            Text(label)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(color)
+            Text("\(percentage)%")
                 .font(.bodySmall)
                 .foregroundColor(.textSecondary)
         }
-        .frame(maxWidth: .infinity)
+    }
+    
+    private var concentricMacroRings: some View {
+        let carbs = appState.dailyNutrition.carbs.current
+        let protein = appState.dailyNutrition.protein.current
+        let fat = appState.dailyNutrition.fats.current
+        
+        let carbsTarget = appState.dailyNutrition.carbs.target
+        let proteinTarget = appState.dailyNutrition.protein.target
+        let fatTarget = appState.dailyNutrition.fats.target
+        
+        let carbsPercentage = carbsTarget > 0 ? min(carbs / carbsTarget, 1.0) : 0
+        let proteinPercentage = proteinTarget > 0 ? min(protein / proteinTarget, 1.0) : 0
+        let fatPercentage = fatTarget > 0 ? min(fat / fatTarget, 1.0) : 0
+        
+        return ZStack {
+            // Carbs ring (outer) - radius 58
+            Circle()
+                .stroke(Color(hex: "E5E7EB"), lineWidth: 8)
+                .frame(width: 116, height: 116)
+            Circle()
+                .trim(from: 0, to: carbsPercentage)
+                .stroke(
+                    Color(hex: "10B981"),
+                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: 116, height: 116)
+            
+            // Protein ring (middle) - radius 46
+            Circle()
+                .stroke(Color(hex: "E5E7EB"), lineWidth: 8)
+                .frame(width: 92, height: 92)
+            Circle()
+                .trim(from: 0, to: proteinPercentage)
+                .stroke(
+                    Color(hex: "F97316"),
+                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: 92, height: 92)
+            
+            // Fat ring (inner) - radius 34
+            Circle()
+                .stroke(Color(hex: "E5E7EB"), lineWidth: 8)
+                .frame(width: 68, height: 68)
+            Circle()
+                .trim(from: 0, to: fatPercentage)
+                .stroke(
+                    Color(hex: "3B82F6"),
+                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: 68, height: 68)
+        }
+    }
+    
+    // MARK: - Steps and Water Section
+    private var stepsAndWaterSection: some View {
+        PrimaryCard {
+            HStack(spacing: Spacing.md) {
+                // Steps Card
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "figure.walk")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color(hex: "4CAF50"))
+                        Text("Steps")
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                    }
+                    
+                    Text(formatSteps(appState.todaySteps))
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("\(Int((appState.todaySteps / 10000) * 100))% goal")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.md)
+                .background(Color(hex: "E8F5E9"))
+                .cornerRadius(Radius.lg)
+                
+                // Water Card
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "drop.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(Color(hex: "2196F3"))
+                        Text("Water")
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                    }
+                    
+                    Text("6/8")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text("glasses")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.md)
+                .background(Color(hex: "E3F2FD"))
+                .cornerRadius(Radius.lg)
+            }
+        }
+        .cornerRadius(24) // rounded-3xl matching React
     }
     
     // MARK: - Today's Meals Section
@@ -728,6 +907,50 @@ struct HomeView: View {
         .padding(16) // Card.padding = 16
         .background(Color(hex: "FFF3E0")) // Light orange/beige background
         .cornerRadius(Radius.lg) // Card.cornerRadius = Radius.lg (10)
+    }
+}
+
+// MARK: - Gauge View Component (matching React SVG design)
+struct GaugeView: View {
+    let gaugeAngle: Double // Angle from -180 to 0 degrees
+    let filledColor: Color
+    let emptyColor: Color
+    
+    private let lineCount = 40 // Number of lines (matching React)
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let height = geometry.size.height
+            let centerX = width / 2
+            let centerY = height // Bottom center
+            let innerRadius: CGFloat = width * 0.39 // ~110 for 280 width
+            let outerRadius: CGFloat = width * 0.43 // ~120 for 280 width
+            
+            ZStack {
+                // Draw lines from -180 to 0 degrees (matching React)
+                ForEach(0..<lineCount, id: \.self) { index in
+                    let angle = -180.0 + (Double(index) * 4.5) // 4.5 degrees per line
+                    let isActive = angle <= (gaugeAngle - 180.0)
+                    let radians = angle * .pi / 180.0
+                    
+                    // Calculate line endpoints
+                    let x1 = centerX + innerRadius * cos(radians)
+                    let y1 = centerY + innerRadius * sin(radians)
+                    let x2 = centerX + outerRadius * cos(radians)
+                    let y2 = centerY + outerRadius * sin(radians)
+                    
+                    Path { path in
+                        path.move(to: CGPoint(x: x1, y: y1))
+                        path.addLine(to: CGPoint(x: x2, y: y2))
+                    }
+                    .stroke(
+                        isActive ? filledColor : emptyColor,
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                    )
+                }
+            }
+        }
     }
 }
 
