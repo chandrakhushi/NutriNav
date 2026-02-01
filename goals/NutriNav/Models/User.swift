@@ -120,3 +120,22 @@ enum CyclePhase: String, Codable {
     case menstruation = "Menstruation"
 }
 
+// MARK: - Weight Entry for Progress Tracking
+
+struct WeightEntry: Codable, Identifiable, Equatable {
+    let id: UUID
+    let date: Date
+    let weight: Double // in kg
+    
+    init(date: Date = Date(), weight: Double) {
+        self.id = UUID()
+        self.date = date
+        self.weight = weight
+    }
+    
+    /// Weight in pounds
+    var weightInLbs: Double {
+        return weight * 2.20462
+    }
+}
+

@@ -7,10 +7,13 @@
 
 import SwiftUI
 import MapKit
+import Combine
 
 struct NearbyView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var viewModel = NearbyFoodViewModel()
+    @State private var searchText: String = ""
+    @State private var showLocationSearch = false
     
     var body: some View {
         NavigationStack {
@@ -45,6 +48,10 @@ struct NearbyView: View {
                 // Header
                 headerSection
                     .padding(.top, Spacing.xxl)
+                
+                // Search Bar
+                searchBar
+                    .padding(.horizontal, Spacing.md)
                 
                 // Budget Filter
                 budgetFilterSection
@@ -136,18 +143,69 @@ struct NearbyView: View {
                 .font(.h1)
                 .foregroundColor(.textPrimary)
             
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: "mappin.circle.fill")
-                    .foregroundColor(.primaryAccent)
-                
-                Text(viewModel.locationName)
-                    .font(.input)
-                    .foregroundColor(.textPrimary)
+            // Tappable location button
+            Button(action: {
+                HapticFeedback.selection()
+                showLocationSearch = true
+            }) {
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "mappin.circle.fill")
+                        .foregroundColor(.primaryAccent)
+                    
+                    Text(viewModel.locationName)
+                        .font(.input)
+                        .foregroundColor(.textPrimary)
+                    
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.textSecondary)
+                }
             }
+            .buttonStyle(PlainButtonStyle())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Spacing.md)
         .padding(.bottom, Spacing.md)
+        .sheet(isPresented: $showLocationSearch) {
+            LocationSearchView(viewModel: viewModel)
+        }
+    }
+    
+    // MARK: - Search Bar
+    
+    private var searchBar: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.textSecondary)
+            
+            TextField("Search restaurants...", text: $searchText)
+                .font(.input)
+                .foregroundColor(.textPrimary)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .onSubmit {
+                    viewModel.searchQuery = searchText
+                    Task {
+                        await viewModel.loadRestaurants()
+                    }
+                }
+            
+            if !searchText.isEmpty {
+                Button(action: {
+                    searchText = ""
+                    viewModel.searchQuery = ""
+                    Task {
+                        await viewModel.loadRestaurants()
+                    }
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.textSecondary)
+                }
+            }
+        }
+        .padding(Spacing.sm)
+        .background(Color.inputBackground)
+        .cornerRadius(Radius.md)
     }
     
     // MARK: - Budget Filter
@@ -338,7 +396,7 @@ struct NearbyView: View {
                                 restaurantName: restaurant.name,
                                 ordered: true
                             )
-                            // TODO: Open order link (DoorDash/UberEats)
+                            openOrderLink(for: restaurant)
                         },
                         icon: "arrow.up.right.square"
                     )
@@ -416,6 +474,34 @@ struct NearbyView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.xxl)
     }
+    
+    // MARK: - Order Link Handler
+    
+    private func openOrderLink(for restaurant: Restaurant) {
+        // Try to open the restaurant's specific order link first
+        if let orderLink = restaurant.orderLink,
+           let url = URL(string: orderLink) {
+            UIApplication.shared.open(url)
+            return
+        }
+        
+        // Fallback: Search for the restaurant on popular delivery platforms
+        let encodedName = restaurant.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let encodedAddress = restaurant.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        
+        // Try DoorDash first (most popular)
+        let doordashURL = "https://www.doordash.com/search/\(encodedName)/"
+        if let url = URL(string: doordashURL) {
+            UIApplication.shared.open(url)
+            return
+        }
+        
+        // Fallback to Google Maps for directions/info
+        let mapsURL = "https://maps.google.com/?q=\(encodedName)+\(encodedAddress)"
+        if let url = URL(string: mapsURL) {
+            UIApplication.shared.open(url)
+        }
+    }
 }
 
 // MARK: - Restaurant Map View
@@ -425,6 +511,7 @@ struct RestaurantMapView: View {
     let userLocation: CLLocation?
     
     @State private var region: MKCoordinateRegion
+    @State private var selectedRestaurant: Restaurant? = nil
     
     init(restaurants: [Restaurant], userLocation: CLLocation?) {
         self.restaurants = restaurants
@@ -452,9 +539,77 @@ struct RestaurantMapView: View {
     }
     
     var body: some View {
-        Map(coordinateRegion: $region, annotationItems: restaurants) { restaurant in
-            MapAnnotation(coordinate: restaurant.coordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)) {
-                RestaurantMapPin(restaurant: restaurant)
+        ZStack {
+            Map(coordinateRegion: $region, showsUserLocation: true, annotationItems: restaurants) { restaurant in
+                MapAnnotation(coordinate: restaurant.coordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)) {
+                    RestaurantMapPin(restaurant: restaurant)
+                        .onTapGesture {
+                            HapticFeedback.selection()
+                            selectedRestaurant = restaurant
+                        }
+                }
+            }
+            .mapControls {
+                MapCompass()
+                MapUserLocationButton()
+            }
+            
+            // Zoom controls overlay
+            VStack {
+                Spacer()
+                
+                HStack {
+                    Spacer()
+                    
+                    VStack(spacing: 0) {
+                        // Zoom In
+                        Button(action: {
+                            HapticFeedback.selection()
+                            withAnimation {
+                                region.span.latitudeDelta /= 2
+                                region.span.longitudeDelta /= 2
+                            }
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.textPrimary)
+                                .frame(width: 44, height: 44)
+                        }
+                        
+                        Divider()
+                        
+                        // Zoom Out
+                        Button(action: {
+                            HapticFeedback.selection()
+                            withAnimation {
+                                region.span.latitudeDelta = min(region.span.latitudeDelta * 2, 1.0)
+                                region.span.longitudeDelta = min(region.span.longitudeDelta * 2, 1.0)
+                            }
+                        }) {
+                            Image(systemName: "minus")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.textPrimary)
+                                .frame(width: 44, height: 44)
+                        }
+                    }
+                    .background(Color.white)
+                    .cornerRadius(8)
+                    .shadow(color: Color.black.opacity(0.2), radius: 4)
+                    .padding(.trailing, Spacing.md)
+                    .padding(.bottom, 120) // Above tab bar
+                }
+            }
+            
+            // Selected restaurant card
+            if let restaurant = selectedRestaurant {
+                VStack {
+                    Spacer()
+                    
+                    selectedRestaurantCard(restaurant: restaurant)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.bottom, 100)
+                        .transition(.move(edge: .bottom))
+                }
             }
         }
         .onAppear {
@@ -466,6 +621,72 @@ struct RestaurantMapView: View {
         .onChange(of: userLocation) { _ in
             updateRegion()
         }
+    }
+    
+    private func selectedRestaurantCard(restaurant: Restaurant) -> some View {
+        HStack(spacing: Spacing.md) {
+            // Restaurant image
+            AsyncImage(url: URL(string: restaurant.imageURL ?? "")) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                default:
+                    Rectangle()
+                        .fill(Color(hex: "E0E0E0"))
+                        .overlay(
+                            Image(systemName: "fork.knife")
+                                .foregroundColor(.textTertiary)
+                        )
+                }
+            }
+            .frame(width: 60, height: 60)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.md))
+            
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(restaurant.name)
+                    .font(.h3)
+                    .foregroundColor(.textPrimary)
+                    .lineLimit(1)
+                
+                HStack(spacing: Spacing.sm) {
+                    Text(restaurant.priceRange.rawValue)
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                    
+                    Text("•")
+                        .foregroundColor(.textTertiary)
+                    
+                    Text("\(String(format: "%.1f", restaurant.distance)) mi")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                    
+                    if restaurant.isOpen {
+                        Text("Open")
+                            .font(.bodySmall)
+                            .foregroundColor(.primaryAccent)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Close button
+            Button(action: {
+                withAnimation {
+                    selectedRestaurant = nil
+                }
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.textTertiary)
+            }
+        }
+        .padding(Spacing.md)
+        .background(Color.white)
+        .cornerRadius(Radius.lg)
+        .shadow(color: Color.black.opacity(0.15), radius: 8, y: 4)
     }
     
     private func updateRegion() {
@@ -544,5 +765,225 @@ struct RoundedCorner: Shape {
             cornerRadii: CGSize(width: radius, height: radius)
         )
         return Path(path.cgPath)
+    }
+}
+
+// MARK: - Location Search View
+struct LocationSearchView: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject var viewModel: NearbyFoodViewModel
+    
+    @State private var searchText: String = ""
+    @State private var searchResults: [MKLocalSearchCompletion] = []
+    @StateObject private var searchCompleter = LocationSearchCompleter()
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.background.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Search Bar
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.textSecondary)
+                        
+                        TextField("Search city or address...", text: $searchText)
+                            .font(.input)
+                            .foregroundColor(.textPrimary)
+                            .autocorrectionDisabled()
+                            .onChange(of: searchText) { _, newValue in
+                                searchCompleter.search(query: newValue)
+                            }
+                        
+                        if !searchText.isEmpty {
+                            Button(action: {
+                                searchText = ""
+                                searchCompleter.results = []
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.textSecondary)
+                            }
+                        }
+                    }
+                    .padding(Spacing.md)
+                    .background(Color.inputBackground)
+                    .cornerRadius(Radius.md)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, Spacing.md)
+                    
+                    // Current Location Button
+                    Button(action: {
+                        HapticFeedback.selection()
+                        viewModel.resetToCurrentLocation()
+                        dismiss()
+                    }) {
+                        HStack(spacing: Spacing.md) {
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.primaryAccent)
+                                .frame(width: 40, height: 40)
+                                .background(Color.primaryAccent.opacity(0.1))
+                                .clipShape(Circle())
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Use Current Location")
+                                    .font(.input)
+                                    .foregroundColor(.textPrimary)
+                                
+                                if viewModel.isUsingCustomLocation {
+                                    Text("Switch back to GPS location")
+                                        .font(.bodySmall)
+                                        .foregroundColor(.textSecondary)
+                                } else {
+                                    Text("Currently active")
+                                        .font(.bodySmall)
+                                        .foregroundColor(.primaryAccent)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            if !viewModel.isUsingCustomLocation {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.primaryAccent)
+                            }
+                        }
+                        .padding(Spacing.md)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    Divider()
+                        .padding(.horizontal, Spacing.md)
+                    
+                    // Search Results
+                    if searchCompleter.results.isEmpty && !searchText.isEmpty {
+                        VStack(spacing: Spacing.md) {
+                            Spacer()
+                            Text("No locations found")
+                                .font(.input)
+                                .foregroundColor(.textSecondary)
+                            Spacer()
+                        }
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(searchCompleter.results, id: \.self) { result in
+                                    locationResultRow(result: result)
+                                    
+                                    Divider()
+                                        .padding(.leading, 60)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Change Location")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.primaryAccent)
+                }
+            }
+        }
+    }
+    
+    private func locationResultRow(result: MKLocalSearchCompletion) -> some View {
+        Button(action: {
+            selectLocation(result)
+        }) {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.textSecondary)
+                    .frame(width: 40, height: 40)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(result.title)
+                        .font(.input)
+                        .foregroundColor(.textPrimary)
+                        .lineLimit(1)
+                    
+                    if !result.subtitle.isEmpty {
+                        Text(result.subtitle)
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(.textTertiary)
+            }
+            .padding(Spacing.md)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private func selectLocation(_ completion: MKLocalSearchCompletion) {
+        // Convert completion to coordinate
+        let searchRequest = MKLocalSearch.Request(completion: completion)
+        let search = MKLocalSearch(request: searchRequest)
+        
+        Task {
+            do {
+                let response = try await search.start()
+                if let mapItem = response.mapItems.first {
+                    let coordinate = mapItem.placemark.coordinate
+                    let name = completion.title
+                    
+                    await MainActor.run {
+                        viewModel.setCustomLocation(coordinate: coordinate, name: name)
+                        HapticFeedback.success()
+                        dismiss()
+                    }
+                }
+            } catch {
+                print("Location search error: \(error)")
+            }
+        }
+    }
+}
+
+// MARK: - Location Search Completer
+final class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+    let objectWillChange = PassthroughSubject<Void, Never>()
+    
+    var results: [MKLocalSearchCompletion] = [] {
+        willSet { objectWillChange.send() }
+    }
+    private let completer = MKLocalSearchCompleter()
+    
+    override init() {
+        super.init()
+        completer.delegate = self
+        completer.resultTypes = [.address, .pointOfInterest]
+    }
+    
+    func search(query: String) {
+        guard !query.isEmpty else {
+            DispatchQueue.main.async {
+                self.results = []
+            }
+            return
+        }
+        completer.queryFragment = query
+    }
+    
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        DispatchQueue.main.async {
+            self.results = completer.results
+        }
+    }
+    
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        print("Search completer error: \(error)")
     }
 }

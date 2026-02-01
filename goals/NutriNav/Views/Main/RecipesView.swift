@@ -887,59 +887,61 @@ struct RecipeDetailView: View {
                         // Enhanced Hero Image with Gradient Overlay
                         ZStack(alignment: .bottomLeading) {
                             // Recipe Image
-                            AsyncImage(url: recipe.imageURL) { phase in
-                                switch phase {
-                                case .empty:
-                                    Rectangle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color(hex: "E0E0E0"), Color(hex: "F5F5F5")],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
+                            GeometryReader { geometry in
+                                AsyncImage(url: recipe.imageURL) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        Rectangle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color(hex: "E0E0E0"), Color(hex: "F5F5F5")],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
                                             )
-                                        )
-                                        .overlay(
-                                            ProgressView()
-                                                .tint(.primaryAccent)
-                                        )
-                                        .onAppear {
-                                            imageLoadingState = .loading
-                                        }
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                        .clipped()
-                                        .onAppear {
-                                            imageLoadingState = .loaded
-                                        }
-                                case .failure:
-                                    Rectangle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color(hex: "E0E0E0"), Color(hex: "F5F5F5")],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
+                                            .overlay(
+                                                ProgressView()
+                                                    .tint(.primaryAccent)
                                             )
-                                        )
-                                        .overlay(
-                                            VStack(spacing: Spacing.sm) {
-                                                Image(systemName: "photo")
-                                                    .font(.system(size: 48))
-                                                    .foregroundColor(.textTertiary)
-                                                Text("Image unavailable")
-                                                    .font(.bodySmall)
-                                                    .foregroundColor(.textSecondary)
+                                            .onAppear {
+                                                imageLoadingState = .loading
                                             }
-                                        )
-                                        .onAppear {
-                                            imageLoadingState = .failed
-                                        }
-                                @unknown default:
-                                    EmptyView()
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: geometry.size.width, height: geometry.size.height)
+                                            .clipped()
+                                            .onAppear {
+                                                imageLoadingState = .loaded
+                                            }
+                                    case .failure:
+                                        Rectangle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color(hex: "E0E0E0"), Color(hex: "F5F5F5")],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .overlay(
+                                                VStack(spacing: Spacing.sm) {
+                                                    Image(systemName: "photo")
+                                                        .font(.system(size: 48))
+                                                        .foregroundColor(.textTertiary)
+                                                    Text("Image unavailable")
+                                                        .font(.bodySmall)
+                                                        .foregroundColor(.textSecondary)
+                                                }
+                                            )
+                                            .onAppear {
+                                                imageLoadingState = .failed
+                                            }
+                                    @unknown default:
+                                        EmptyView()
+                                    }
                                 }
                             }
-                            .frame(maxWidth: .infinity)
                             .frame(height: 350)
                             .clipped()
                             
@@ -1009,6 +1011,7 @@ struct RecipeDetailView: View {
                             .padding(.bottom, Spacing.md)
                         }
                         .frame(maxWidth: .infinity)
+                        .clipped()
                         
                         // Content Section
                         VStack(spacing: Spacing.lg) {

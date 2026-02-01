@@ -52,7 +52,8 @@ class YelpService: PlaceSearchService {
         location: CLLocation,
         radius: Int,
         limit: Int,
-        priceFilter: PriceRange?
+        priceFilter: PriceRange?,
+        query: String? = nil
     ) async throws -> [Restaurant] {
         guard isAvailable else {
             throw YelpServiceError.apiKeyRequired
@@ -83,6 +84,11 @@ class YelpService: PlaceSearchService {
         
         if let price = price {
             queryItems.append(URLQueryItem(name: "price", value: price))
+        }
+        
+        // Add search term if provided
+        if let query = query, !query.isEmpty {
+            queryItems.append(URLQueryItem(name: "term", value: query))
         }
         
         components.queryItems = queryItems

@@ -18,6 +18,8 @@ class NearbyFoodViewModel: ObservableObject {
     @Published var viewMode: ViewMode = .list
     @Published var userLocation: CLLocation?
     @Published var locationName: String = "Loading location..."
+    @Published var searchQuery: String = ""
+    @Published var isUsingCustomLocation: Bool = false
     
     enum ViewMode {
         case list
@@ -103,18 +105,51 @@ class NearbyFoodViewModel: ObservableObject {
         }
         
         do {
-            let results = try await placeService.searchNearbyRestaurants(
+            var results = try await placeService.searchNearbyRestaurants(
                 location: location,
                 radius: 5000, // 5km
                 limit: 20,
-                priceFilter: selectedPriceRange
+                priceFilter: selectedPriceRange,
+                query: searchQuery.isEmpty ? nil : searchQuery
             )
+            
+            // Filter by search query if the API doesn't support it natively
+            if !searchQuery.isEmpty {
+                let lowercaseQuery = searchQuery.lowercased()
+                results = results.filter { restaurant in
+                    restaurant.name.lowercased().contains(lowercaseQuery) ||
+                    restaurant.cuisine.joined(separator: " ").lowercased().contains(lowercaseQuery)
+                }
+            }
             
             restaurants = results
             isLoading = false
         } catch {
             errorMessage = error.localizedDescription
             isLoading = false
+        }
+    }
+    
+    /// Set a custom location by address/city name
+    func setCustomLocation(coordinate: CLLocationCoordinate2D, name: String) {
+        userLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        locationName = name
+        isUsingCustomLocation = true
+        Task {
+            await loadRestaurants()
+        }
+    }
+    
+    /// Reset to current device location
+    func resetToCurrentLocation() {
+        isUsingCustomLocation = false
+        locationManager.startUpdatingLocation()
+        if let location = locationManager.location {
+            userLocation = location
+            reverseGeocodeLocation(location)
+        }
+        Task {
+            await loadRestaurants()
         }
     }
     

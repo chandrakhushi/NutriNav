@@ -10,6 +10,7 @@ import SwiftUI
 struct OnboardingWelcomeView: View {
     @EnvironmentObject var appState: AppState
     @State private var navigateToOnboarding = false
+    @State private var showSignIn = false
     
     var body: some View {
         ZStack {
@@ -52,7 +53,7 @@ struct OnboardingWelcomeView: View {
                         )
                         
                         FeatureCard(
-                            icon: "apple.fill",
+                            icon: "book.closed.fill",
                             title: "Smart Recipes",
                             subtitle: "Get personalized recipes based on what you have."
                         )
@@ -78,7 +79,7 @@ struct OnboardingWelcomeView: View {
                         SecondaryButton(
                             title: "Sign In",
                             action: {
-                                // TODO: Navigate to sign in
+                                showSignIn = true
                             }
                         )
                     }
@@ -96,6 +97,10 @@ struct OnboardingWelcomeView: View {
         }
         .navigationDestination(isPresented: $navigateToOnboarding) {
             OnboardingPersonalInfoView()
+        }
+        .sheet(isPresented: $showSignIn) {
+            SignInView()
+                .environmentObject(appState)
         }
     }
 }

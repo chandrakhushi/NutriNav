@@ -95,23 +95,20 @@ struct OnboardingGoalView: View {
                         PrimaryButton(
                             title: "Let's Go!",
                             action: {
+                                HapticFeedback.success()
                                 appState.user.goal = selectedGoal
-                                // Calculate nutrition goals
-                                if let age = appState.user.age,
-                                   let gender = appState.user.gender,
-                                   let height = appState.user.height,
-                                   let weight = appState.user.weight,
-                                   let activityLevel = appState.user.activityLevel,
-                                   let goal = appState.user.goal {
-                                    appState.dailyNutrition = NutritionStats.calculateGoals(
-                                        age: age,
-                                        gender: gender,
-                                        height: height,
-                                        weight: weight,
-                                        activityLevel: activityLevel,
-                                        goal: goal
-                                    )
-                                }
+                                
+                                // Recalculate all nutrition goals with complete user data
+                                appState.recalculateNutritionGoals()
+                                
+                                // Track onboarding completion
+                                appState.analyticsService.trackOnboardingCompleted(
+                                    age: appState.user.age ?? 0,
+                                    gender: appState.user.gender?.rawValue ?? "Unknown",
+                                    goal: appState.user.goal?.rawValue ?? "Unknown"
+                                )
+                                
+                                // Mark onboarding complete (this persists via didSet)
                                 appState.hasCompletedOnboarding = true
                             },
                             icon: "arrow.right",

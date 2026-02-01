@@ -19,6 +19,7 @@ enum HomeRoute: Hashable {
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @State private var showNutritionDetails = false
+    @State private var showFoodLogHistory = false
     @State private var navigationPath = NavigationPath()
     
     var body: some View {
@@ -31,6 +32,12 @@ struct HomeView: View {
                         // Header Section
                         headerSection
                             .padding(.top, Spacing.xxl)
+                        
+                        // Vacation Mode Banner (if active)
+                        if appState.isVacationMode {
+                            vacationModeBanner
+                                .padding(.horizontal, Spacing.md)
+                        }
                         
                         // Calories Section
                         caloriesSection
@@ -78,7 +85,54 @@ struct HomeView: View {
                 NutritionDetailsView()
                     .environmentObject(appState)
             }
+            .sheet(isPresented: $showFoodLogHistory) {
+                FoodLogHistoryView()
+                    .environmentObject(appState)
+            }
         }
+    }
+    
+    // MARK: - Vacation Mode Banner
+    private var vacationModeBanner: some View {
+        HStack(spacing: Spacing.md) {
+            Image(systemName: "airplane")
+                .font(.system(size: 22))
+                .foregroundColor(.white)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Vacation Mode")
+                    .font(.h3)
+                    .foregroundColor(.white)
+                Text("Maintenance calories")
+                    .font(.bodySmall)
+                    .foregroundColor(.white.opacity(0.9))
+            }
+            
+            Spacer()
+            
+            Button(action: {
+                appState.isVacationMode = false
+            }) {
+                Text("End")
+                    .font(.input)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color(hex: "F06292"))
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.sm)
+                    .background(Color.white)
+                    .cornerRadius(Radius.md)
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            LinearGradient(
+                colors: [Color(hex: "F48FB1"), Color(hex: "F06292")],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .cornerRadius(Radius.lg)
+        .shadow(color: Color(hex: "F48FB1").opacity(0.3), radius: 8, x: 0, y: 4)
     }
     
     // MARK: - Header Section (matching React design)
@@ -86,19 +140,45 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             // Top row with date and actions
             HStack {
-                HStack(spacing: Spacing.xs) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 16))
-                        .foregroundColor(.textSecondary)
-                    Text(formattedDateShort)
-                        .font(.bodySmall)
-                        .foregroundColor(.textSecondary)
+                // Calendar button - tap to see food log history
+                Button(action: {
+                    HapticFeedback.selection()
+                    showFoodLogHistory = true
+                }) {
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 16))
+                            .foregroundColor(.primaryAccent)
+                        Text(formattedDateShort)
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10))
+                            .foregroundColor(.textTertiary)
+                    }
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.xs)
+                    .background(Color.primaryAccent.opacity(0.1))
+                    .cornerRadius(Radius.md)
                 }
                 
                 Spacer()
                 
-                // Streak and plus button
-                HStack(spacing: Spacing.md) {
+                // Actions: Vacation mode, Streak, and plus button
+                HStack(spacing: Spacing.sm) {
+                    // Vacation Mode Toggle
+                    Button(action: {
+                        HapticFeedback.selection()
+                        appState.isVacationMode.toggle()
+                    }) {
+                        Image(systemName: "airplane")
+                            .font(.system(size: 14))
+                            .foregroundColor(appState.isVacationMode ? .white : Color(hex: "FF4081"))
+                            .frame(width: 32, height: 32)
+                            .background(appState.isVacationMode ? Color(hex: "FF4081") : Color(hex: "FCE4EC"))
+                            .clipShape(Circle())
+                    }
+                    
                     // Streak display (red background matching React)
                     HStack(spacing: 4) {
                         Image(systemName: "flame.fill")
@@ -177,12 +257,12 @@ struct HomeView: View {
                 backgroundColor: Color(hex: "FFF3E0")
             )
             
-            // Water Card (Blue)
+            // Water Card (Blue) - using container-based tracking
             summaryCard(
-                icon: "drop.fill",
+                icon: appState.waterSettings.containerType.icon,
                 title: "Water",
-                value: "6/8",
-                subtitle: "glasses",
+                value: "\(appState.waterContainersConsumed)/\(appState.dailyWaterGoalContainers)",
+                subtitle: appState.waterSettings.containerNamePlural,
                 color: Color(hex: "2196F3"),
                 backgroundColor: Color(hex: "E3F2FD")
             )
@@ -245,18 +325,10 @@ struct HomeView: View {
     private var caloriesSection: some View {
         PrimaryCard {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack {
-                    Text("Calories KCAL")
-                        .font(.bodySmall)
-                        .fontWeight(.bold)
-                        .foregroundColor(.textSecondary)
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 20))
-                        .foregroundColor(Color(hex: "D1D5DB")) // gray-300
-                }
+                Text("Calories KCAL")
+                    .font(.bodySmall)
+                    .fontWeight(.bold)
+                    .foregroundColor(.textSecondary)
                 
                 VStack(spacing: Spacing.xl) {
                     // Semi-circular gauge
@@ -343,18 +415,10 @@ struct HomeView: View {
     private var macrosBreakdownSection: some View {
         PrimaryCard {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                HStack {
-                    Text("Macros Breakdown")
-                        .font(.bodySmall)
-                        .fontWeight(.bold)
-                        .foregroundColor(.textSecondary)
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 20))
-                        .foregroundColor(Color(hex: "D1D5DB")) // gray-300
-                }
+                Text("Macros Breakdown")
+                    .font(.bodySmall)
+                    .fontWeight(.bold)
+                    .foregroundColor(.textSecondary)
                 
                 HStack(spacing: Spacing.md) {
                     // Macros horizontal layout (three columns side-by-side)
@@ -497,29 +561,9 @@ struct HomeView: View {
                 .background(Color(hex: "E8F5E9"))
                 .cornerRadius(Radius.lg)
                 
-                // Water Card
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    HStack(spacing: Spacing.xs) {
-                        Image(systemName: "drop.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "2196F3"))
-                        Text("Water")
-                            .font(.bodySmall)
-                            .foregroundColor(.textSecondary)
-                    }
-                    
-                    Text("6/8")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.textPrimary)
-                    
-                    Text("glasses")
-                        .font(.bodySmall)
-                        .foregroundColor(.textSecondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(Spacing.md)
-                .background(Color(hex: "E3F2FD"))
-                .cornerRadius(Radius.lg)
+                // Water Card - Tappable with container support
+                WaterTrackingCard()
+                    .environmentObject(appState)
             }
         }
         .cornerRadius(24) // rounded-3xl matching React
@@ -652,7 +696,7 @@ struct HomeView: View {
                     .foregroundColor(.white)
                 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Log Food or Workout")
+                    Text("Log Food")
                         .font(.h3) // 18pt, medium
                         .foregroundColor(.white)
                     
@@ -825,7 +869,7 @@ struct HomeView: View {
     // MARK: - Primary Actions Section
     private var primaryActionsSection: some View {
         VStack(spacing: Spacing.md) {
-            // Log Food or Workout - Primary action with green gradient
+            // Log Food - Primary action with green gradient
             Button(action: {
                 HapticFeedback.impact()
                 navigationPath.append(HomeRoute.log(mealType: nil))
@@ -836,7 +880,7 @@ struct HomeView: View {
                         .foregroundColor(.white)
                     
                     VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("Log Food or Workout")
+                        Text("Log Food")
                             .font(.h3) // 18pt, medium
                             .foregroundColor(.white)
                         
@@ -990,7 +1034,7 @@ struct GaugeView: View {
 
 // MARK: - Navigation Destination Views
 
-// MARK: - Log Food or Workout View (Design System: h1=24pt medium)
+// MARK: - Log Food View (Design System: h1=24pt medium)
 struct LogFoodWorkoutView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
@@ -1002,7 +1046,7 @@ struct LogFoodWorkoutView: View {
                 
                 ScrollView {
                     VStack(spacing: Spacing.lg) {
-                        Text("Log Food or Workout")
+                        Text("Log Food")
                             .font(.h1) // 24pt, medium
                             .foregroundColor(.textPrimary)
                         
@@ -1013,7 +1057,7 @@ struct LogFoodWorkoutView: View {
                     .padding(Spacing.xl)
                 }
             }
-            .navigationTitle("Log Food or Workout")
+            .navigationTitle("Log Food")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -1300,5 +1344,553 @@ struct MealDetailsView: View {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+}
+
+// MARK: - Water Tracking Card
+struct WaterTrackingCard: View {
+    @EnvironmentObject var appState: AppState
+    @State private var showWaterSettings = false
+    
+    private var containerIcon: String {
+        appState.waterSettings.containerType.icon
+    }
+    
+    private var containerName: String {
+        appState.waterSettings.containerName
+    }
+    
+    private var progressText: String {
+        "\(appState.waterContainersConsumed)/\(appState.dailyWaterGoalContainers)"
+    }
+    
+    private var subtitleText: String {
+        let sizeSuffix = appState.waterSettings.containerType == .bottle
+            ? " (\(Int(appState.waterSettings.customBottleSizeOz))oz)"
+            : ""
+        return "tap to add \(containerName)\(sizeSuffix)"
+    }
+    
+    var body: some View {
+        Button(action: {
+            HapticFeedback.selection()
+            appState.addWaterContainer()
+        }) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: containerIcon)
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "2196F3"))
+                    Text("Water")
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                    
+                    Spacer()
+                    
+                    // Settings button
+                    Button(action: {
+                        HapticFeedback.selection()
+                        showWaterSettings = true
+                    }) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(hex: "2196F3").opacity(0.6))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    // Minus button for removing water
+                    if appState.waterContainersConsumed > 0 {
+                        Button(action: {
+                            HapticFeedback.selection()
+                            appState.removeWaterContainer()
+                        }) {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(Color(hex: "2196F3").opacity(0.6))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                
+                // Progress display
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(progressText)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.textPrimary)
+                    
+                    Text(appState.waterSettings.containerNamePlural)
+                        .font(.bodySmall)
+                        .foregroundColor(.textSecondary)
+                }
+                
+                // Progress bar
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(hex: "2196F3").opacity(0.2))
+                            .frame(height: 6)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(hex: "2196F3"))
+                            .frame(width: geometry.size.width * min(appState.waterProgress, 1.0), height: 6)
+                    }
+                }
+                .frame(height: 6)
+                
+                Text(subtitleText)
+                    .font(.system(size: 10))
+                    .foregroundColor(.textTertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .background(Color(hex: "E3F2FD"))
+            .cornerRadius(Radius.lg)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $showWaterSettings) {
+            WaterSettingsView()
+                .environmentObject(appState)
+        }
+    }
+}
+
+// MARK: - Water Settings View
+struct WaterSettingsView: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+    
+    @State private var selectedContainerType: WaterContainerType
+    @State private var bottleSizeText: String
+    
+    // Common bottle sizes for quick selection (based on popular bottle brands)
+    private let commonBottleSizes: [(name: String, oz: Double)] = [
+        ("Small (12 oz)", 12),      // Kids bottles, small tumblers
+        ("Standard (17 oz)", 17),   // Disposable water bottles
+        ("Medium (24 oz)", 24),     // Common reusable size
+        ("Large (32 oz)", 32),      // 1 liter, popular size
+        ("XL (40 oz)", 40),         // Large insulated bottles
+        ("Half Gallon (64 oz)", 64) // Motivational jugs
+    ]
+    
+    init() {
+        _selectedContainerType = State(initialValue: .glass)
+        _bottleSizeText = State(initialValue: "30")
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.background.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Daily Goal Info
+                        dailyGoalCard
+                            .padding(.horizontal, Spacing.md)
+                        
+                        // Container Type Selection
+                        containerTypeSection
+                            .padding(.horizontal, Spacing.md)
+                        
+                        // Bottle Size Selection (only if bottle selected)
+                        if selectedContainerType == .bottle {
+                            bottleSizeSection
+                                .padding(.horizontal, Spacing.md)
+                        }
+                        
+                        // Summary
+                        summaryCard
+                            .padding(.horizontal, Spacing.md)
+                    }
+                    .padding(.top, Spacing.lg)
+                    .padding(.bottom, Spacing.xl)
+                }
+            }
+            .navigationTitle("Water Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(.textSecondary)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveSettings()
+                        HapticFeedback.success()
+                        dismiss()
+                    }
+                    .foregroundColor(.primaryAccent)
+                    .fontWeight(.semibold)
+                }
+            }
+            .onAppear {
+                // Load current settings
+                selectedContainerType = appState.waterSettings.containerType
+                bottleSizeText = String(format: "%.0f", appState.waterSettings.customBottleSizeOz)
+            }
+        }
+    }
+    
+    private var dailyGoalCard: some View {
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack {
+                    Image(systemName: "drop.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color(hex: "2196F3"))
+                    
+                    Text("Your Daily Goal")
+                        .font(.h3)
+                        .foregroundColor(.textPrimary)
+                }
+                
+                Text("\(Int(appState.recommendedDailyWaterOz)) oz per day")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(Color(hex: "2196F3"))
+                
+                Text("Based on your weight (\(Int(appState.user.weight ?? 65)) kg) and activity level")
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
+            }
+        }
+    }
+    
+    private var containerTypeSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("Container Type")
+                .font(.h3)
+                .foregroundColor(.textPrimary)
+            
+            HStack(spacing: Spacing.md) {
+                containerTypeButton(.glass)
+                containerTypeButton(.bottle)
+            }
+        }
+    }
+    
+    private func containerTypeButton(_ type: WaterContainerType) -> some View {
+        let isSelected = selectedContainerType == type
+        
+        return Button(action: {
+            HapticFeedback.selection()
+            selectedContainerType = type
+        }) {
+            VStack(spacing: Spacing.sm) {
+                Image(systemName: type.icon)
+                    .font(.system(size: 32))
+                    .foregroundColor(isSelected ? .white : Color(hex: "2196F3"))
+                
+                Text(type.rawValue)
+                    .font(.input)
+                    .foregroundColor(isSelected ? .white : .textPrimary)
+                
+                Text(type == .glass ? "8 oz" : "Custom size")
+                    .font(.bodySmall)
+                    .foregroundColor(isSelected ? .white.opacity(0.8) : .textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(Spacing.lg)
+            .background(isSelected ? Color(hex: "2196F3") : Color.inputBackground)
+            .cornerRadius(Radius.lg)
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.lg)
+                    .stroke(isSelected ? Color.clear : Color.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var bottleSizeSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("Bottle Size")
+                .font(.h3)
+                .foregroundColor(.textPrimary)
+            
+            // Quick size buttons
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.sm) {
+                    ForEach(commonBottleSizes, id: \.oz) { size in
+                        let isSelected = bottleSizeText == String(format: "%.0f", size.oz)
+                        
+                        Button(action: {
+                            HapticFeedback.selection()
+                            bottleSizeText = String(format: "%.0f", size.oz)
+                        }) {
+                            Text(size.name)
+                                .font(.bodySmall)
+                                .foregroundColor(isSelected ? .white : .textPrimary)
+                                .padding(.horizontal, Spacing.md)
+                                .padding(.vertical, Spacing.sm)
+                                .background(isSelected ? Color(hex: "2196F3") : Color.inputBackground)
+                                .cornerRadius(Radius.md)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
+            
+            // Custom size input
+            HStack {
+                Text("Custom size:")
+                    .font(.input)
+                    .foregroundColor(.textSecondary)
+                
+                TextField("30", text: $bottleSizeText)
+                    .font(.input)
+                    .foregroundColor(.textPrimary)
+                    .keyboardType(.numberPad)
+                    .frame(width: 60)
+                    .multilineTextAlignment(.center)
+                    .padding(Spacing.sm)
+                    .background(Color.inputBackground)
+                    .cornerRadius(Radius.sm)
+                
+                Text("oz")
+                    .font(.input)
+                    .foregroundColor(.textSecondary)
+            }
+        }
+    }
+    
+    private var summaryCard: some View {
+        let bottleSize = Double(bottleSizeText) ?? 30.0
+        let containerSize = selectedContainerType == .glass ? 8.0 : bottleSize
+        let dailyGoal = appState.recommendedDailyWaterOz
+        let containersNeeded = Int(ceil(dailyGoal / containerSize))
+        let containerName = selectedContainerType == .glass ? "glasses" : "bottles"
+        let containerNameSingular = selectedContainerType == .glass ? "glass" : "bottle"
+        
+        // Calculate if last container is partial
+        let fullContainers = Int(floor(dailyGoal / containerSize))
+        let remainderOz = dailyGoal - (Double(fullContainers) * containerSize)
+        let hasPartialContainer = remainderOz > 0
+        
+        return PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("Summary")
+                    .font(.h3)
+                    .foregroundColor(.textPrimary)
+                
+                HStack {
+                    Image(systemName: selectedContainerType.icon)
+                        .font(.system(size: 24))
+                        .foregroundColor(Color(hex: "2196F3"))
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("To reach \(Int(dailyGoal)) oz")
+                            .font(.bodySmall)
+                            .foregroundColor(.textSecondary)
+                        
+                        if hasPartialContainer && fullContainers > 0 {
+                            Text("\(fullContainers) full + partial \(containerNameSingular)")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.textPrimary)
+                        } else {
+                            Text("\(containersNeeded) \(containerName)")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.textPrimary)
+                        }
+                    }
+                }
+                
+                // Show breakdown
+                if hasPartialContainer && fullContainers > 0 {
+                    Text("\(fullContainers) × \(Int(containerSize)) oz = \(Int(Double(fullContainers) * containerSize)) oz + \(Int(remainderOz)) oz more")
+                        .font(.bodySmall)
+                        .foregroundColor(.textTertiary)
+                } else {
+                    Text("\(containersNeeded) × \(Int(containerSize)) oz = \(Int(dailyGoal)) oz")
+                        .font(.bodySmall)
+                        .foregroundColor(.textTertiary)
+                }
+            }
+        }
+    }
+    
+    private func saveSettings() {
+        let bottleSize = Double(bottleSizeText) ?? 30.0
+        appState.setWaterContainer(
+            type: selectedContainerType,
+            customSizeOz: selectedContainerType == .bottle ? bottleSize : nil
+        )
+    }
+}
+
+// MARK: - Food Log History View
+
+struct FoodLogHistoryView: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+    @State private var selectedDate: Date = Date()
+    
+    private var calendar: Calendar { Calendar.current }
+    
+    private var entriesForSelectedDate: [FoodEntry] {
+        appState.foodLogs
+            .filter { log in calendar.isDate(log.date, inSameDayAs: selectedDate) }
+            .flatMap { $0.entries }
+    }
+    
+    private var datesWithLogs: Set<Date> {
+        Set(appState.foodLogs.map { log in
+            calendar.startOfDay(for: log.date)
+        })
+    }
+    
+    private var totalCaloriesForDate: Int {
+        entriesForSelectedDate.reduce(0) { $0 + Int($1.calories) }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.background.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Calendar
+                        VStack {
+                            DatePicker(
+                                "",
+                                selection: $selectedDate,
+                                in: ...Date(),
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.graphical)
+                            .tint(.primaryAccent)
+                            .padding(Spacing.sm)
+                        }
+                        .background(Color.cardBackground)
+                        .cornerRadius(Radius.lg)
+                        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                        .padding(.horizontal, Spacing.md)
+                        
+                        // Selected Date Summary
+                        VStack(spacing: Spacing.sm) {
+                            Text(formattedDate(selectedDate))
+                                .font(.h2)
+                                .foregroundColor(.textPrimary)
+                            
+                            if entriesForSelectedDate.isEmpty {
+                                Text("No food logged")
+                                    .font(.body)
+                                    .foregroundColor(.textSecondary)
+                            } else {
+                                Text("\(totalCaloriesForDate) calories")
+                                    .font(.h3)
+                                    .foregroundColor(.primaryAccent)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(Spacing.md)
+                        .background(Color.cardBackground)
+                        .cornerRadius(Radius.lg)
+                        .padding(.horizontal, Spacing.md)
+                        
+                        // Food Entries for Selected Date
+                        if !entriesForSelectedDate.isEmpty {
+                            VStack(alignment: .leading, spacing: Spacing.md) {
+                                Text("Food Logged")
+                                    .font(.h3)
+                                    .foregroundColor(.textPrimary)
+                                    .padding(.horizontal, Spacing.md)
+                                
+                                ForEach(entriesForSelectedDate) { entry in
+                                    FoodEntryRow(entry: entry)
+                                }
+                            }
+                        }
+                        
+                        Spacer(minLength: Spacing.xl)
+                    }
+                    .padding(.top, Spacing.md)
+                }
+            }
+            .navigationTitle("Food History")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.primaryAccent)
+                }
+            }
+        }
+    }
+    
+    private func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter.string(from: date)
+    }
+}
+
+struct FoodEntryRow: View {
+    let entry: FoodEntry
+    
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            // Meal type icon
+            ZStack {
+                Circle()
+                    .fill(mealColor.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: mealIcon)
+                    .font(.system(size: 18))
+                    .foregroundColor(mealColor)
+            }
+            
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(entry.name)
+                    .font(.h4)
+                    .foregroundColor(.textPrimary)
+                    .lineLimit(1)
+                
+                Text(entry.mealType?.rawValue ?? "Meal")
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: Spacing.xs) {
+                Text("\(Int(entry.calories))")
+                    .font(.h4)
+                    .foregroundColor(.textPrimary)
+                
+                Text("cal")
+                    .font(.bodySmall)
+                    .foregroundColor(.textSecondary)
+            }
+        }
+        .padding(Spacing.md)
+        .background(Color.cardBackground)
+        .cornerRadius(Radius.md)
+        .padding(.horizontal, Spacing.md)
+    }
+    
+    private var mealIcon: String {
+        switch entry.mealType {
+        case .breakfast: return "sunrise.fill"
+        case .lunch: return "sun.max.fill"
+        case .dinner: return "moon.fill"
+        case .snacks: return "leaf.fill"
+        case .none: return "fork.knife"
+        }
+    }
+    
+    private var mealColor: Color {
+        switch entry.mealType {
+        case .breakfast: return Color(hex: "FF9800")
+        case .lunch: return Color(hex: "4CAF50")
+        case .dinner: return Color(hex: "673AB7")
+        case .snacks: return Color(hex: "03A9F4")
+        case .none: return Color(hex: "9E9E9E")
+        }
     }
 }

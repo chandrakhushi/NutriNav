@@ -25,11 +25,19 @@ class AppleMapKitPlaceService: PlaceSearchService {
         location: CLLocation,
         radius: Int,
         limit: Int,
-        priceFilter: PriceRange?
+        priceFilter: PriceRange?,
+        query: String? = nil
     ) async throws -> [Restaurant] {
         // Create search request
         let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = "restaurant"
+        
+        // Use custom query if provided, otherwise default to "restaurant"
+        if let query = query, !query.isEmpty {
+            request.naturalLanguageQuery = "\(query) restaurant"
+        } else {
+            request.naturalLanguageQuery = "restaurant"
+        }
+        
         request.region = MKCoordinateRegion(
             center: location.coordinate,
             latitudinalMeters: Double(radius) * 2, // MapKit uses diameter

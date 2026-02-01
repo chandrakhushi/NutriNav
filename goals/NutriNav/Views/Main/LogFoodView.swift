@@ -15,7 +15,8 @@ struct LogFoodView: View {
     @State private var searchText: String = ""
     @State private var showManualEntry = false
     @State private var selectedFoodForDetails: FoodDetailsItem? = nil
-    @State private var showPremium = false
+    @State private var showBarcodeScanner = false
+    @State private var scannedFoodResult: ScannedFoodResult? = nil
     
     // Search state
     @State private var searchResults: [FoodSearchResult] = []
@@ -150,8 +151,8 @@ struct LogFoodView: View {
                         searchResultsSection
                             .padding(.horizontal, Spacing.md)
                     } else {
-                        // Log with Photo Card
-                        logWithPhotoCard
+                        // Scan Barcode Card
+                        scanBarcodeCard
                             .padding(.horizontal, Spacing.md)
                         
                     // Quick Add Section (only show if user has logged foods)
@@ -212,9 +213,19 @@ struct LogFoodView: View {
             )
             .environmentObject(appState)
         }
-        .sheet(isPresented: $showPremium) {
-            PremiumView()
-                .environmentObject(appState)
+        .sheet(isPresented: $showBarcodeScanner) {
+            BarcodeScannerView { result in
+                // Show food details for the scanned product
+                selectedFoodForDetails = FoodDetailsItem(
+                    name: result.displayName,
+                    calories: result.calories,
+                    protein: result.protein,
+                    carbs: result.carbs,
+                    fat: result.fat,
+                    servingSize: result.servingSize
+                )
+            }
+            .environmentObject(appState)
         }
     }
     
@@ -408,56 +419,49 @@ struct LogFoodView: View {
         }
     }
     
-    // MARK: - Log with Photo Card
-    private var logWithPhotoCard: some View {
-        let isPremium = appState.subscriptionService.hasPremiumAccess()
-        
-        return Button(action: {
+    // MARK: - Scan Barcode Card
+    private var scanBarcodeCard: some View {
+        Button(action: {
             HapticFeedback.selection()
-            if isPremium {
-                // TODO: Implement photo logging
-            } else {
-                showPremium = true
-            }
+            showBarcodeScanner = true
         }) {
             HStack(spacing: Spacing.md) {
-                Image(systemName: isPremium ? "camera.fill" : "lock.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.white)
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 48, height: 48)
+                    
+                    Image(systemName: "barcode.viewfinder")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                }
                 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    HStack(spacing: Spacing.xs) {
-                        Text("Log with Photo")
-                            .font(.h3)
-                            .foregroundColor(.white)
-                        
-                        if !isPremium {
-                            Text("Premium")
-                                .font(.labelSmall)
-                                .foregroundColor(Color(hex: "2196F3"))
-                                .padding(.horizontal, Spacing.xs)
-                                .padding(.vertical, 2)
-                                .background(Color.white)
-                                .cornerRadius(Radius.sm)
-                        }
-                    }
+                    Text("Scan Barcode")
+                        .font(.h3)
+                        .foregroundColor(.white)
                     
-                    Text(isPremium ? "Take a picture of your meal" : "Unlock photo logging with Premium")
+                    Text("Instantly log packaged foods")
                         .font(.bodySmall)
                         .foregroundColor(.white.opacity(0.9))
                 }
                 
                 Spacer()
                 
-                if !isPremium {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.8))
-                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.8))
             }
             .padding(Spacing.md)
-            .background(Color(hex: "2196F3")) // Blue
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: "FF6B35"), Color(hex: "F7931E")],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
             .cornerRadius(Radius.lg)
+            .shadow(color: Color(hex: "FF6B35").opacity(0.3), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(PlainButtonStyle())
     }
