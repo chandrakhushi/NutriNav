@@ -49,11 +49,6 @@ class BodyMetricsService {
             return 0.407 * weight + 0.267 * height - 19.2
         case .female:
             return 0.252 * weight + 0.473 * height - 48.3
-        case .other:
-            // Use average of male and female formulas
-            let maleLBM = 0.407 * weight + 0.267 * height - 19.2
-            let femaleLBM = 0.252 * weight + 0.473 * height - 48.3
-            return (maleLBM + femaleLBM) / 2.0
         }
     }
     
@@ -84,9 +79,6 @@ class BodyMetricsService {
             return baseBMR + 5
         case .female:
             return baseBMR - 161
-        case .other:
-            // Use average
-            return baseBMR - 78
         }
     }
     

@@ -9,19 +9,17 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
-    @State private var isAuthenticated = false // TODO: Check actual auth status
-    
     var body: some View {
         Group {
-            if appState.hasCompletedOnboarding {
-                MainTabView()
-            } else if isAuthenticated {
+            if !appState.isAuthenticated {
                 NavigationStack {
-                    OnboardingWelcomeView()
+                    SignInView()
                 }
+            } else if appState.hasCompletedOnboarding {
+                MainTabView()
             } else {
                 NavigationStack {
-                    LoginView()
+                    OnboardingWelcomeView()
                 }
             }
         }

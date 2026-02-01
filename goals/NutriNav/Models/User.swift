@@ -8,7 +8,13 @@
 import Foundation
 
 struct User: Codable {
-    var age: Int?
+    var dateOfBirth: Date?
+    
+    var age: Int? {
+        guard let dob = dateOfBirth else { return nil }
+        return Calendar.current.dateComponents([.year], from: dob, to: Date()).year
+    }
+    
     var gender: Gender?
     var height: Double? // in cm
     var weight: Double? // in kg
@@ -29,13 +35,18 @@ struct User: Codable {
 enum Gender: String, Codable, CaseIterable {
     case female = "Female"
     case male = "Male"
-    case other = "Other"
+    
+    var symbol: String {
+        switch self {
+        case .female: return "person.fill" // SF Symbol name
+        case .male: return "person.fill"    // SF Symbol name
+        }
+    }
     
     var emoji: String {
         switch self {
         case .female: return "👩"
         case .male: return "👨"
-        case .other: return "🧑"
         }
     }
 }
@@ -71,15 +82,15 @@ enum ActivityLevel: String, Codable, CaseIterable {
 enum FitnessGoal: String, Codable, CaseIterable {
     case loseWeight = "Lose Weight"
     case maintainWeight = "Maintain Weight"
+    case gainWeight = "Gain Weight"
     case buildMuscle = "Build Muscle"
-    case glowUp = "Glow Up"
     
     var emoji: String {
         switch self {
         case .loseWeight: return "📉"
         case .maintainWeight: return "⚖️"
+        case .gainWeight: return "📈"
         case .buildMuscle: return "💪"
-        case .glowUp: return "✨"
         }
     }
     
@@ -87,8 +98,8 @@ enum FitnessGoal: String, Codable, CaseIterable {
         switch self {
         case .loseWeight: return "Sustainable weight loss"
         case .maintainWeight: return "Maintain current weight"
+        case .gainWeight: return "Increase body weight"
         case .buildMuscle: return "Gain muscle and strength"
-        case .glowUp: return "Overall transformation"
         }
     }
 }

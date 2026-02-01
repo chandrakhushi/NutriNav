@@ -13,6 +13,9 @@ struct DailyNutrition: Codable {
     var carbs: NutritionGoal
     var fats: NutritionGoal
     
+    // Custom override support
+    var isCustom: Bool = false
+    
     // Weekly banking support
     var weeklyBudget: Double = 0
     var consumedThisWeek: Double = 0

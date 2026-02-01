@@ -27,8 +27,10 @@ class NutritionLogicService {
         
         let baseMultiplier: Double
         switch goal {
-        case .buildMuscle, .glowUp:
+        case .buildMuscle:
             baseMultiplier = 2.2 // Higher for muscle building
+        case .gainWeight:
+            baseMultiplier = 2.0 // Higher for weight gain
         case .loseWeight:
             baseMultiplier = 2.0 // Higher to preserve muscle during deficit
         case .maintainWeight:
@@ -57,8 +59,8 @@ class NutritionLogicService {
             baseTarget = tdee - 500 // 500 cal deficit for ~1lb/week
         case .buildMuscle:
             baseTarget = tdee + 300 // 300 cal surplus for muscle gain
-        case .glowUp:
-            baseTarget = tdee + 200 // Moderate surplus
+        case .gainWeight:
+            baseTarget = tdee + 300 // 300 cal surplus for weight gain
         case .maintainWeight:
             baseTarget = tdee
         }
@@ -182,9 +184,9 @@ class NutritionLogicService {
             // Higher carbs for energy
             carbRatio = 0.50
             fatRatio = 0.25
-        case .glowUp:
-            // Balanced
-            carbRatio = 0.45
+        case .gainWeight:
+            // Higher carbs for weight gain
+            carbRatio = 0.50
             fatRatio = 0.30
         case .maintainWeight:
             // Balanced

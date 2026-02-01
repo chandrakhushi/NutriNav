@@ -9,6 +9,7 @@ import SwiftUI
 
 struct OnboardingActivityView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedActivity: ActivityLevel?
     @State private var navigateToNext = false
     
@@ -22,7 +23,7 @@ struct OnboardingActivityView: View {
                     // Progress indicator
                     VStack(spacing: Spacing.sm) {
                         HStack {
-                            Text("Step 3 of 4")
+                            Text("Step 2 of 3")
                                 .font(.bodySmall)
                                 .foregroundColor(.textSecondary)
                             
@@ -31,14 +32,14 @@ struct OnboardingActivityView: View {
                             HStack(spacing: Spacing.xs) {
                                 Text("✨")
                                     .font(.system(size: 12))
-                                Text("75% there!")
+                                Text("67% there!")
                                     .font(.bodySmall)
                             }
                             .foregroundColor(.warning)
                         }
                         .padding(.horizontal, Spacing.md)
                         
-                        ProgressView(value: 0.75)
+                        ProgressView(value: 0.67)
                             .tint(.primaryAccent)
                             .background(Color.textTertiary.opacity(0.2))
                             .scaleEffect(x: 1, y: 2, anchor: .center)
@@ -86,8 +87,10 @@ struct OnboardingActivityView: View {
                         SecondaryButton(
                             title: "Back",
                             action: {
-                                // Go back handled by navigation
-                            }
+                                HapticFeedback.selection()
+                                dismiss()
+                            },
+                            isEnabled: true
                         )
                         
                         PrimaryButton(
@@ -96,12 +99,12 @@ struct OnboardingActivityView: View {
                                 appState.user.activityLevel = selectedActivity
                                 navigateToNext = true
                             },
-                            icon: "arrow.right"
+                            icon: "arrow.right",
+                            isEnabled: selectedActivity != nil
                         )
                     }
                     .padding(.horizontal, Spacing.md)
                     .padding(.bottom, Spacing.xl)
-                    .disabled(selectedActivity == nil)
                 }
             }
         }

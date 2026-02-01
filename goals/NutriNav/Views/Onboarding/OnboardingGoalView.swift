@@ -9,8 +9,8 @@ import SwiftUI
 
 struct OnboardingGoalView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedGoal: FitnessGoal?
-    @State private var navigateToMain = false
     
     var body: some View {
         ZStack {
@@ -22,7 +22,7 @@ struct OnboardingGoalView: View {
                     // Progress indicator
                     VStack(spacing: Spacing.sm) {
                         HStack {
-                            Text("Step 4 of 4")
+                            Text("Step 3 of 3")
                                 .font(.bodySmall)
                                 .foregroundColor(.textSecondary)
                             
@@ -86,8 +86,10 @@ struct OnboardingGoalView: View {
                         SecondaryButton(
                             title: "Back",
                             action: {
-                                // Go back handled by navigation
-                            }
+                                HapticFeedback.selection()
+                                dismiss()
+                            },
+                            isEnabled: true
                         )
                         
                         PrimaryButton(
@@ -111,21 +113,17 @@ struct OnboardingGoalView: View {
                                     )
                                 }
                                 appState.hasCompletedOnboarding = true
-                                navigateToMain = true
                             },
-                            icon: "arrow.right"
+                            icon: "arrow.right",
+                            isEnabled: selectedGoal != nil
                         )
                     }
                     .padding(.horizontal, Spacing.md)
                     .padding(.bottom, Spacing.xl)
-                    .disabled(selectedGoal == nil)
                 }
             }
         }
         .navigationBarBackButtonHidden(true)
-        .onAppear {
-            navigateToMain = false
-        }
     }
 }
 
@@ -138,9 +136,9 @@ struct GoalCard: View {
     // Using DesignSystem colors - solid colors matching Figma design
     var goalColor: Color {
         switch goal {
-        case .glowUp: return Color(hex: "E91E63") // Pink
         case .loseWeight: return Color(hex: "FF9800") // Orange
         case .maintainWeight: return Color.primaryAccent // Green
+        case .gainWeight: return Color(hex: "E91E63") // Pink
         case .buildMuscle: return Color(hex: "2196F3") // Blue
         }
     }

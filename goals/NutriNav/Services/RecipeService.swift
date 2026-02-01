@@ -10,8 +10,23 @@ import Foundation
 
 // MARK: - Recipe Service Protocol
 protocol RecipeServiceProtocol {
-    func searchRecipes(query: String) async throws -> [RecipeSearchResult]
+    func searchRecipes(query: String, filters: RecipeFilters?) async throws -> [RecipeSearchResult]
     func getRecipeDetails(id: Int) async throws -> RecipeDetail?
+}
+
+// MARK: - Recipe Filters
+struct RecipeFilters {
+    var maxReadyTime: Int? // in minutes
+    var minCalories: Int?
+    var maxCalories: Int?
+    var minProtein: Int? // in grams
+    var maxProtein: Int? // in grams
+    var diet: String? // e.g., "vegetarian", "vegan", "gluten-free", "keto", "paleo"
+    var type: String? // e.g., "main course", "dessert", "appetizer", "salad", "soup"
+    
+    static var none: RecipeFilters {
+        RecipeFilters()
+    }
 }
 
 // MARK: - Recipe Search Result Model
@@ -31,20 +46,36 @@ struct RecipeSearchResult: Identifiable, Codable, Hashable {
     
     // Extract calories from nutrition object
     var calories: Double? {
-        nutrition?.nutrients.first(where: { $0.name.lowercased().contains("calorie") })?.amount
+        guard let nutrition = nutrition else { return nil }
+        // Try different possible names for calories
+        return nutrition.nutrients.first(where: { nutrient in
+            let name = nutrient.name.lowercased()
+            return name.contains("calorie") || name.contains("energy")
+        })?.amount
     }
     
     // Extract protein from nutrition object
     var protein: Double? {
-        nutrition?.nutrients.first(where: { $0.name.lowercased() == "protein" })?.amount
+        guard let nutrition = nutrition else { return nil }
+        // Try different possible names for protein
+        return nutrition.nutrients.first(where: { nutrient in
+            let name = nutrient.name.lowercased()
+            return name == "protein" || name.contains("protein")
+        })?.amount
     }
     
     var displayCalories: Int {
-        Int(calories ?? 0)
+        if let calories = calories, calories > 0 {
+            return Int(calories)
+        }
+        return 0
     }
     
     var displayProtein: Int {
-        Int(protein ?? 0)
+        if let protein = protein, protein > 0 {
+            return Int(protein)
+        }
+        return 0
     }
 }
 
@@ -65,16 +96,57 @@ struct RecipeDetail: Identifiable, Codable {
         guard let instructions = instructions, !instructions.isEmpty else {
             return []
         }
-        // Instructions come as HTML or numbered text, parse them
-        return instructions
+        
+        // Remove HTML tags first
+        var cleanedInstructions = instructions
+            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+        
+        // Try splitting by newlines first
+        var steps = cleanedInstructions
             .components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-            .map { step in
-                // Remove HTML tags if present
-                step.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-                    .trimmingCharacters(in: .whitespaces)
+        
+        // If no newlines found, try splitting by numbered patterns (1., 2., etc.)
+        if steps.count <= 1 {
+            let pattern = #"(\d+\.\s*)"#
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                let nsString = cleanedInstructions as NSString
+                let matches = regex.matches(in: cleanedInstructions, options: [], range: NSRange(location: 0, length: nsString.length))
+                
+                if matches.count > 1 {
+                    var newSteps: [String] = []
+                    for (index, match) in matches.enumerated() {
+                        let startRange = match.range.location
+                        let endRange = index < matches.count - 1 ? matches[index + 1].range.location : nsString.length
+                        let stepRange = NSRange(location: startRange, length: endRange - startRange)
+                        let step = nsString.substring(with: stepRange)
+                            .trimmingCharacters(in: .whitespaces)
+                            .replacingOccurrences(of: pattern, with: "", options: .regularExpression)
+                        if !step.isEmpty {
+                            newSteps.append(step)
+                        }
+                    }
+                    if !newSteps.isEmpty {
+                        steps = newSteps
+                    }
+                }
             }
+        }
+        
+        // If still a single paragraph, try splitting by sentence endings
+        if steps.count <= 1 {
+            steps = cleanedInstructions
+                .components(separatedBy: CharacterSet(charactersIn: ".!?"))
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty && $0.count > 10 } // Filter out very short fragments
+        }
+        
+        // Final cleanup
+        return steps.map { step in
+            step.trimmingCharacters(in: .whitespaces)
+        }.filter { !$0.isEmpty }
     }
     
     var imageURL: URL? {
@@ -150,7 +222,7 @@ class RecipeService: RecipeServiceProtocol {
     }
     
     // MARK: - Search Recipes
-    func searchRecipes(query: String) async throws -> [RecipeSearchResult] {
+    func searchRecipes(query: String, filters: RecipeFilters? = nil) async throws -> [RecipeSearchResult] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             return []
         }
@@ -168,6 +240,31 @@ class RecipeService: RecipeServiceProtocol {
             URLQueryItem(name: "fillIngredients", value: "false"), // Don't need full ingredient details for search
             URLQueryItem(name: "apiKey", value: apiKey)
         ]
+        
+        // Add filters if provided
+        if let filters = filters {
+            if let maxReadyTime = filters.maxReadyTime {
+                queryItems.append(URLQueryItem(name: "maxReadyTime", value: "\(maxReadyTime)"))
+            }
+            if let minCalories = filters.minCalories {
+                queryItems.append(URLQueryItem(name: "minCalories", value: "\(minCalories)"))
+            }
+            if let maxCalories = filters.maxCalories {
+                queryItems.append(URLQueryItem(name: "maxCalories", value: "\(maxCalories)"))
+            }
+            if let minProtein = filters.minProtein {
+                queryItems.append(URLQueryItem(name: "minProtein", value: "\(minProtein)"))
+            }
+            if let maxProtein = filters.maxProtein {
+                queryItems.append(URLQueryItem(name: "maxProtein", value: "\(maxProtein)"))
+            }
+            if let diet = filters.diet, !diet.isEmpty {
+                queryItems.append(URLQueryItem(name: "diet", value: diet))
+            }
+            if let type = filters.type, !type.isEmpty {
+                queryItems.append(URLQueryItem(name: "type", value: type))
+            }
+        }
         
         components.queryItems = queryItems
         

@@ -16,6 +16,12 @@ class AppState: ObservableObject {
     @Published var hasCompletedOnboarding: Bool
     @Published var selectedTab: TabItem = .home
     
+    // Auth
+    let authService = AppleAuthService()
+    @Published var authUser: AuthUser?
+    @Published var isAuthenticated: Bool = false
+    private var cancellables = Set<AnyCancellable>()
+    
     // HealthKit integration
     let healthKitService = HealthKitService.shared
     @Published var todaySteps: Double = 0
@@ -36,6 +42,9 @@ class AppState: ObservableObject {
     // Favorite foods (stored by food name for easy lookup)
     @Published var favoriteFoodNames: Set<String> = []
     
+    // Favorite recipes (stored by recipe ID)
+    @Published var favoriteRecipeIds: Set<Int> = []
+    
     // Body metrics (calculated)
     @Published var bodyMetrics: BodyMetrics?
     
@@ -54,12 +63,14 @@ class AppState: ObservableObject {
         var defaultUser = User()
         defaultUser.name = "Sarah Johnson"
         defaultUser.email = "sarah.j@email.com"
-        defaultUser.age = 23
+        // Create a date of birth that results in age 23
+        let calendar = Calendar.current
+        defaultUser.dateOfBirth = calendar.date(byAdding: .year, value: -23, to: Date())
         defaultUser.gender = .female
         defaultUser.height = 164
         defaultUser.weight = 65
         defaultUser.activityLevel = .moderatelyActive
-        defaultUser.goal = .glowUp
+        defaultUser.goal = .maintainWeight
         
         self.user = defaultUser
         
@@ -110,7 +121,7 @@ class AppState: ObservableObject {
                 height: 164,
                 weight: 65,
                 activityLevel: .moderatelyActive,
-                goal: .glowUp
+                goal: .maintainWeight
             )
             
             fallbackNutrition.weeklyBudget = nutritionLogicService.calculateWeeklyBudget(
@@ -128,6 +139,11 @@ class AppState: ObservableObject {
             self.favoriteFoodNames = Set(savedFavorites)
         }
         
+        // Load favorite recipes from UserDefaults
+        if let savedRecipeIds = UserDefaults.standard.array(forKey: "favoriteRecipeIds") as? [Int] {
+            self.favoriteRecipeIds = Set(savedRecipeIds)
+        }
+        
         // Set up HealthKit observers
         setupHealthKit()
         
@@ -137,6 +153,8 @@ class AppState: ObservableObject {
             gender: defaultUser.gender?.rawValue ?? "Unknown",
             goal: defaultUser.goal?.rawValue ?? "Unknown"
         )
+        
+        setupAuth()
     }
     
     private func setupHealthKit() {
@@ -316,6 +334,15 @@ class AppState: ObservableObject {
         return dailyNutrition.calories.current - todayActiveCalories
     }
     
+    /// Update nutrition targets with custom values
+    func updateNutritionTargets(calories: Double, protein: Double, carb: Double, fat: Double) {
+        dailyNutrition.calories.target = calories
+        dailyNutrition.protein.target = protein
+        dailyNutrition.carbs.target = carb
+        dailyNutrition.fats.target = fat
+        dailyNutrition.isCustom = true
+    }
+    
     // MARK: - Favorite Foods Management
     
     /// Toggle favorite status for a food
@@ -337,6 +364,68 @@ class AppState: ObservableObject {
     private func saveFavorites() {
         UserDefaults.standard.set(Array(favoriteFoodNames), forKey: "favoriteFoodNames")
     }
+    
+    // MARK: - Favorite Recipes Management
+    
+    /// Toggle favorite status for a recipe
+    func toggleFavoriteRecipe(recipeId: Int) {
+        if favoriteRecipeIds.contains(recipeId) {
+            favoriteRecipeIds.remove(recipeId)
+        } else {
+            favoriteRecipeIds.insert(recipeId)
+        }
+        saveFavoriteRecipes()
+    }
+    
+    /// Check if a recipe is favorited
+    func isFavoriteRecipe(recipeId: Int) -> Bool {
+        return favoriteRecipeIds.contains(recipeId)
+    }
+    
+    /// Save favorite recipes to UserDefaults
+    private func saveFavoriteRecipes() {
+        UserDefaults.standard.set(Array(favoriteRecipeIds), forKey: "favoriteRecipeIds")
+    }
+    
+    // MARK: - Auth Management
+    
+    private func setupAuth() {
+        // Bind auth service state to AppState
+        authService.$currentUser
+            .receive(on: RunLoop.main)
+            .assign(to: \.authUser, on: self)
+            .store(in: &cancellables)
+            
+        $authUser
+            .map { $0 != nil }
+            .assign(to: \.isAuthenticated, on: self)
+            .store(in: &cancellables)
+            
+        // Check initial state
+        Task {
+            await authService.checkCredentialState()
+        }
+    }
+    
+    func signInWithApple() async {
+        do {
+            _ = try await authService.signInWithApple()
+        } catch {
+            print("Sign in failed: \(error)")
+        }
+    }
+    
+    func signOut() {
+        authService.signOut()
+    }
+    
+    #if DEBUG
+    func debugBypassAuth() {
+        let debugUser = AuthUser(id: "debug_user", email: "debug@example.com", fullName: "Debug User")
+        self.authUser = debugUser
+        self.isAuthenticated = true
+    }
+    #endif
 }
 
 enum TabItem: String, CaseIterable {
