@@ -706,6 +706,9 @@ class AppState: ObservableObject {
         dailyNutrition.weeklyBudget = nutritionLogicService.calculateWeeklyBudget(
             dailyTarget: dailyNutrition.calories.target
         )
+        
+        // Fix: Restore current totals from existing food logs after target recalculation
+        updateNutritionFromFoodLogs()
     }
     
     /// Add food entry to log
@@ -966,6 +969,7 @@ class AppState: ObservableObject {
 enum TabItem: String, CaseIterable {
     case home = "Home"
     case recipes = "Recipes"
+    case log = "Log"
     case nearby = "Nearby"
     case activities = "Activities"
     case profile = "Profile"
@@ -974,6 +978,7 @@ enum TabItem: String, CaseIterable {
         switch self {
         case .home: return "house.fill"
         case .recipes: return "book.fill"
+        case .log: return "plus.circle.fill"
         case .nearby: return "mappin.circle.fill"
         case .activities: return "figure.run"
         case .profile: return "person.fill"

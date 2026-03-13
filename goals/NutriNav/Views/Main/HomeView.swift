@@ -43,6 +43,10 @@ struct HomeView: View {
                         caloriesSection
                             .padding(.horizontal, Spacing.md)
                         
+                        // Active Calories Card
+                        activeCaloriesCard
+                            .padding(.horizontal, Spacing.md)
+                        
                         // Macros Breakdown Section
                         macrosBreakdownSection
                             .padding(.horizontal, Spacing.md)
@@ -355,16 +359,6 @@ struct HomeView: View {
                         }
                     }
                     
-                    // Active Calories
-                    HStack(spacing: Spacing.xs) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(Color(hex: "FF9800"))
-                        Text("Calories Burnt: \(Int(appState.todayActiveCalories)) cal")
-                            .font(.bodySmall)
-                            .foregroundColor(.textSecondary)
-                    }
-                    .padding(.top, Spacing.xs)
                 }
             }
         }
@@ -375,6 +369,53 @@ struct HomeView: View {
             x: 0,
             y: 4
         )
+    }
+    
+    // MARK: - Active Calories Card
+    private var activeCaloriesCard: some View {
+        PrimaryCard {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                // Header
+                HStack {
+                    HStack(spacing: Spacing.xs) {
+                        Circle()
+                            .fill(Color(hex: "FF2D55"))
+                            .frame(width: 8, height: 8)
+                        
+                        Text("Active Calories")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(Color(hex: "374151")) // Gray-700
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.textTertiary)
+                }
+                
+                // Segments and Value in same row
+                HStack(alignment: .center, spacing: Spacing.md) {
+                    SegmentedProgressBar(
+                        value: appState.todayActiveCalories,
+                        maxValue: 600
+                    )
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(Color(hex: "111827")) // Gray-900
+                        
+                        Text("\(Int(appState.todayActiveCalories))")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(Color(hex: "111827")) // Gray-900
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+            }
+        }
+        .cornerRadius(24)
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
     }
     
     // MARK: - Calorie Gauge (Speed dial style - matching React design)

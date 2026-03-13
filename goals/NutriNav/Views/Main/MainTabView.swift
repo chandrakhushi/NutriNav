@@ -24,6 +24,14 @@ struct MainTabView: View {
                 }
                 .tag(TabItem.recipes)
             
+            NavigationStack {
+                LogFoodView()
+            }
+                .tabItem {
+                    Label("Log", systemImage: "plus.circle.fill")
+                }
+                .tag(TabItem.log)
+            
             NearbyView()
                 .tabItem {
                     Label("Nearby", systemImage: "mappin.circle.fill")

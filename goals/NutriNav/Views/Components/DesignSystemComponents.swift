@@ -342,3 +342,42 @@ struct InteractiveCard<Content: View>: View {
     }
 }
 
+// MARK: - Progress Components
+
+struct SegmentedProgressBar: View {
+    let value: Double
+    let maxValue: Double
+    var segmentCount: Int = 40
+    var activeColor: Color = Color(hex: "FF2D55") // Vibrant iOS Pink/Red
+    var inactiveColor: Color = Color(hex: "F2F2F7") // System Gray 6
+    
+    private var progress: Double {
+        guard maxValue > 0 else { return 0 }
+        return min(value / maxValue, 1.0)
+    }
+    
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<segmentCount, id: \.self) { index in
+                Capsule()
+                    .fill(Double(index) / Double(segmentCount) < progress ? activeColor : inactiveColor)
+                    .frame(height: 44)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+}
+
+// MARK: - Glassmorphism Components
+
+struct VisualEffectBlur: UIViewRepresentable {
+    var blurStyle: UIBlurEffect.Style
+    
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        return UIVisualEffectView(effect: UIBlurEffect(style: blurStyle))
+    }
+    
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        uiView.effect = UIBlurEffect(style: blurStyle)
+    }
+}
